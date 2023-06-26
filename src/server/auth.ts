@@ -5,6 +5,7 @@ import {
   type NextAuthOptions,
   type DefaultSession,
 } from "next-auth";
+import { CommonProviderOptions } from "next-auth/providers";
 import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
 import { env } from "~/env.mjs";
@@ -51,6 +52,25 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: env.GOOGLE_ID,
       clientSecret: env.GOOGLE_SECRET,
+      profile(profile: {
+        sub: string;
+        name: string;
+        email: string;
+        picture: string;
+      }): {
+        id: string;
+        name: string;
+        email: string;
+        image: string;
+      } {
+        console.log(profile);
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
+      },
     }),
     /**
      * ...add more providers here.
