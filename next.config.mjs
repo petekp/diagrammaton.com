@@ -6,6 +6,19 @@ await import("./src/env.mjs");
 
 /** @type {import("next").NextConfig} */
 const config = {
+  async headers() {
+    return [
+      {
+        source: "/",
+        headers: [
+          {
+            key: "Bypass-Tunnel-Reminder",
+            value: "Bypass-Tunnel-Reminder",
+          },
+        ],
+      },
+    ];
+  },
   reactStrictMode: true,
 
   /**
