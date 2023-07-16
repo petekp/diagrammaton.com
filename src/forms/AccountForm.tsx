@@ -15,18 +15,24 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
 
 const formSchema = z.object({
   username: z.string().min(2, {
     message: "Username must be at least 2 characters.",
   }),
+  email: z.string().min(2, {
+    message: "Email must be at least 2 characters.",
+  }),
 });
 
 export function AccountForm() {
+  const { data: sessionData } = useSession();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
+      email: "",
     },
   });
 
@@ -40,7 +46,7 @@ export function AccountForm() {
           e.preventDefault();
           // form.handleSubmit(onSubmit)();
         }}
-        className="space-y-8"
+        className="space-y-4"
       >
         <FormField
           name="username"
@@ -48,11 +54,23 @@ export function AccountForm() {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="shadcn" {...field} />
+                <Input placeholder={sessionData?.user?.name || ""} {...field} />
               </FormControl>
-              <FormDescription>
-                This is your public display name.
-              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder={sessionData?.user?.email || ""}
+                  {...field}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
