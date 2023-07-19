@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "compounds": [
+    {
+        "label": "Run all",
+        "dependsOn": ["npm run dev", "localtunnel:pete-dev"]
+    }
+    ],
+    "tasks": [
+        {
+          "label": "npm run dev",
+            "type": "npm",
+            "script": "dev",
+            "problemMatcher": [],
+            "isBackground": true,
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+              "panel": "dedicated",
+              "clear": true
+            }
+        },
+        {
+          "label": "localtunnel:pete-dev",
+          "type": "shell",
+          "command": "lt",
+          "args": ["-p", "3000", "-s", "pete-dev"],
+          "problemMatcher": [],
+          "isBackground": true,
+          "runOptions": {
+            "runOn": "folderOpen"
+          },
+          "dependsOn": ["dev"],
+          "presentation": {
+            "panel": "dedicated",
+            "clear": true
+          }
+        },
+    ]
+}
