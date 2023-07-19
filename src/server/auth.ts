@@ -36,6 +36,10 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authOptions: NextAuthOptions = {
+  pages: {
+    signIn: "/",
+    signOut: "/",
+  },
   callbacks: {
     session: ({ session, user }) => ({
       ...session,
@@ -60,13 +64,14 @@ export const authOptions: NextAuthOptions = {
         name: string;
         email: string;
         image: string;
+        isBetaUser: boolean;
       } {
-        console.log(profile);
         return {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          isBetaUser: true,
         };
       },
     }),
