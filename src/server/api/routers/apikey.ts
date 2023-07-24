@@ -6,7 +6,6 @@ const apiKeyLastFourSchema = z.string().nullable();
 
 export const apiKeyRouter = createTRPCRouter({
   getUserKeyLastFour: protectedProcedure
-    .input(z.object({ userId: z.string() }))
     .output(apiKeyLastFourSchema)
     .query(async ({ ctx }) => {
       const user = await prisma.user.findUnique({

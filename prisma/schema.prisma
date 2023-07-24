@@ -46,6 +46,7 @@ model User {
     pluginConfigurations PluginConfiguration[]
     usages               Usage[]
     payments             Payment[]
+    licenseKeys          LicenseKey[]
     planId               String?
     plan                 Plan?                 @relation(fields: [planId], references: [id])
     teams                Team[]                @relation("TeamMembers")
@@ -98,4 +99,15 @@ model Team {
     id    String @id @default(cuid())
     name  String
     users User[] @relation("TeamMembers")
+}
+
+model LicenseKey {
+    id        String   @id @default(cuid())
+    userId    String   @unique
+    uses      Int
+    revoked   Boolean  @default(false)
+    expiresAt DateTime
+    key       String   @unique
+    createdAt DateTime @default(now())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
