@@ -49,6 +49,8 @@ model User {
     planId               String?
     plan                 Plan?                 @relation(fields: [planId], references: [id])
     teams                Team[]                @relation("TeamMembers")
+    openaiApiKey         String?               @unique
+    openaiApiKeyLastFour String?
 }
 
 model VerificationToken {

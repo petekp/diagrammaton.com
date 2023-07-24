@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useState } from "react";
 
 export default function Home({
   providers,
@@ -119,28 +120,44 @@ const formSchema = z.object({
   email: z.string().min(2, {
     message: "Email must be at least 2 characters.",
   }),
+  openaiApiKey: z.string().min(2, {
+    message: "OpenAI API Key must be at least 2 characters.",
+  }),
 });
 
 function AccountForm() {
   const { data: sessionData } = useSession();
+  const setApiKey = api.apiKey.setUserApiKey.useMutation();
+  const [lastfourdigits, setLastFourDigits] = useState("");
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
       email: "",
+      openaiApiKey: "",
     },
   });
 
-  const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = (data) =>
+  const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
+    console.log("onSubmit");
     console.log(data);
+    const digits = (await setApiKey.mutateAsync({
+      userId: sessionData?.user?.id || "",
+      apiKey: data.openaiApiKey,
+    })) as string;
+
+    setLastFourDigits(`••••••••${digits}`);
+    console.log({ lastfourdigits });
+  };
 
   return (
     <Form {...form}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void form.handleSubmit(onSubmit);
+          console.log("submit");
+          form.handleSubmit(onSubmit);
         }}
         className="space-y-4"
       >
@@ -171,7 +188,30 @@ function AccountForm() {
             </FormItem>
           )}
         />
-        <Button type="submit">Submit</Button>
+        <FormField
+          name="openaiApiKey"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>OpenAI API Key</FormLabel>
+              <FormControl>
+                <Input placeholder={lastfourdigits} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button
+          type="submit"
+          onClick={() =>
+            onSubmit({
+              email: "string",
+              openaiApiKey: "23r23r5235r235",
+              username: "",
+            })
+          }
+        >
+          Submit
+        </Button>
       </form>
     </Form>
   );
