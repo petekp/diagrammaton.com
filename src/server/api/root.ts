@@ -1,3 +1,4 @@
+import { diagrammatonRouter } from "./routers/diagrammaton";
 import { exampleRouter } from "~/server/api/routers/example";
 import { createTRPCRouter } from "~/server/api/trpc";
 import { apiKeyRouter } from "./routers/apikey";
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   example: exampleRouter,
   apiKey: apiKeyRouter,
   license: licenseKeyRouter,
+  diagrammaton: diagrammatonRouter,
 });
 
 // export type definition of API

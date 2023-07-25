@@ -123,10 +123,14 @@ const formSchema = z.object({
 
 function AccountForm() {
   const [copySuccess, setCopySuccess] = useState("");
+  const [diagramDescription, setDiagramDescription] = useState(
+    "a basic authentication flow"
+  );
 
   const { data: sessionData } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation();
   const currentLicenseKey = api.license.getUserLicenseKey.useQuery();
+  const generateDiagram = api.diagrammaton.generateMermaidSyntax.useMutation();
   const saveApiKey = api.apiKey.setUserApiKey.useMutation();
   const lastfourdigitsquery = api.apiKey.getUserKeyLastFour.useQuery();
 
@@ -168,6 +172,13 @@ function AccountForm() {
     e.preventDefault();
     const newLicenseKey = await generateLicenseKey.mutateAsync();
     setValue("licenseKey", newLicenseKey);
+  };
+
+  const createDiagram = async () => {
+    const newDiagram = await generateDiagram.mutateAsync({
+      diagramDescription,
+    });
+    console.log(newDiagram);
   };
 
   function copyLicenseKey(e: React.MouseEvent<HTMLButtonElement>) {
@@ -281,6 +292,26 @@ function AccountForm() {
             </FormItem>
           )}
         />
+        <div className="flex w-full flex-col space-y-2">
+          <Input
+            disabled={generateDiagram.isLoading}
+            placeholder={"Describe a diagram"}
+            onChange={(e) => setDiagramDescription(e.target.value)}
+            className="mr-1 flex-1"
+          />
+          <div className="flex w-full flex-grow flex-row">
+            <Button
+              disabled={generateDiagram.isLoading}
+              variant="outline"
+              type="button"
+              className="mr-1 flex flex-1 flex-grow"
+              onClick={() => void createDiagram()}
+            >
+              <Copy className="mr-3 h-4 w-4" />
+              Generate Diagram
+            </Button>
+          </div>
+        </div>
       </form>
     </Form>
   );
