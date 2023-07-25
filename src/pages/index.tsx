@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
@@ -23,10 +23,10 @@ import {
 import {
   Card,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "../../@/components/ui/card";
+import { Copy, RefreshCcw } from "lucide-react";
 
 export default function Home({
   providers,
@@ -56,8 +56,8 @@ function SignIn({
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
             <Card className="w-[450px] p-5">
-              <CardHeader>
-                <CardTitle>Diagrammaton</CardTitle>
+              <CardHeader className="mb-5">
+                <CardTitle className="mb-2">Diagrammaton</CardTitle>
                 <CardDescription>
                   {sessionData ? (
                     <span>Logged in as {sessionData.user?.email}</span>
@@ -65,11 +65,6 @@ function SignIn({
                     "Sign in to get a license code"
                   )}
                 </CardDescription>
-              </CardHeader>
-
-              {sessionData && <AccountForm />}
-
-              <CardFooter>
                 {Object.values(providers).map((provider) => (
                   <div key={provider.name}>
                     <Button
@@ -86,7 +81,9 @@ function SignIn({
                     </Button>
                   </div>
                 ))}
-              </CardFooter>
+              </CardHeader>
+
+              {sessionData && <AccountForm />}
             </Card>
           </div>
 
@@ -117,19 +114,23 @@ const formSchema = z.object({
   openaiApiKey: z
     .string()
     .min(50, {
-      message: "Invalid key, please check it and try again.",
+      message: "Invalid key length, please verify and try again.",
     })
     .startsWith("sk-", {
-      message: "Invalid key, please check it and try again.",
+      message: "Invalid key, please verify and try again.",
     }),
 });
 
 function AccountForm() {
+  const [copySuccess, setCopySuccess] = useState("");
+
   const { data: sessionData } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation();
   const currentLicenseKey = api.license.getUserLicenseKey.useQuery();
   const saveApiKey = api.apiKey.setUserApiKey.useMutation();
   const lastfourdigitsquery = api.apiKey.getUserKeyLastFour.useQuery();
+
+  const licenseKeyRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -145,7 +146,7 @@ function AccountForm() {
     setValue(
       "openaiApiKey",
       lastfourdigitsquery.data
-        ? `sk-••••••••••••••${lastfourdigitsquery.data.slice(-4)}`
+        ? `sk-•••••••••••••••••••••••••${lastfourdigitsquery.data.slice(-4)}`
         : ""
     );
   }, [sessionData, lastfourdigitsquery.data, setValue]);
@@ -163,23 +164,65 @@ function AccountForm() {
     });
   };
 
-  const onSubmitLicenseKey = async () => {
-    console.log("generate");
-    await generateLicenseKey.mutateAsync();
+  const onSubmitLicenseKey = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const newLicenseKey = await generateLicenseKey.mutateAsync();
+    setValue("licenseKey", newLicenseKey);
   };
+
+  function copyLicenseKey(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (!licenseKeyRef.current?.value) {
+      return;
+    }
+    navigator.clipboard
+      .writeText(licenseKeyRef?.current?.value || "")
+      .then(() => {
+        setCopySuccess("Copied!");
+      })
+      .catch((err) => console.error("Failed to copy text: ", err));
+  }
+
+  useEffect(() => {
+    if (copySuccess) {
+      const timer = setTimeout(() => {
+        setCopySuccess("");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copySuccess]);
 
   return (
     <Form {...form}>
-      <form className="space-y-4">
+      <form className="space-y-6">
         <Controller
           name="openaiApiKey"
           render={({ field, fieldState: { error } }) => (
             <FormItem className="flex flex-col items-start">
-              <FormLabel>OpenAI API key</FormLabel>
+              <FormLabel>Your OpenAI API key</FormLabel>
               <FormControl>
-                <Input placeholder={"Enter key"} {...field} />
+                <div className="flex w-full flex-grow flex-row">
+                  <Input
+                    disabled={saveApiKey.isLoading}
+                    placeholder={"Enter key"}
+                    {...field}
+                    className="mr-1 flex flex-grow"
+                  />
+                  <Button
+                    type="button"
+                    disabled={saveApiKey.isLoading}
+                    variant="secondary"
+                    onClick={(e) => void form.handleSubmit(onSubmitApiKey)(e)}
+                  >
+                    Save
+                  </Button>
+                </div>
               </FormControl>
-              {error && <p className="error-message">{error.message}</p>}
+              {error && (
+                <p className="error-message text-sm text-red-700">
+                  {error.message}
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -188,21 +231,56 @@ function AccountForm() {
           name="licenseKey"
           render={({ field, fieldState: { error } }) => (
             <FormItem className="flex flex-col items-start">
-              <FormLabel>License key</FormLabel>
+              <FormLabel className="flex flex-1 justify-between">
+                <span>Your license key</span>
+                {copySuccess && (
+                  <span className="success-message ml-2 animate-bounce text-green-600 ">
+                    {copySuccess}
+                  </span>
+                )}
+              </FormLabel>
               <FormControl>
-                <Input placeholder={"Generate a key"} {...field} />
+                <div className="flex w-full flex-col space-y-2">
+                  <Input
+                    disabled={generateLicenseKey.isLoading}
+                    placeholder={"Generate a key"}
+                    {...field}
+                    ref={licenseKeyRef}
+                    className="mr-1 flex-1"
+                  />
+                  <div className="flex w-full flex-grow flex-row">
+                    <Button
+                      disabled={generateLicenseKey.isLoading}
+                      variant="outline"
+                      type="button"
+                      className="mr-1 flex flex-1 flex-grow"
+                      onClick={(e) => copyLicenseKey(e)}
+                    >
+                      <Copy className="mr-3 h-4 w-4" />
+                      Copy to clipboard
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={generateLicenseKey.isLoading}
+                      className="flex flex-1"
+                      onClick={(e) => void onSubmitLicenseKey(e)}
+                    >
+                      <RefreshCcw
+                        className={`mr-2 h-4 w-4 stroke-slate-500 ${
+                          generateLicenseKey.isLoading ? "animate-spin" : ""
+                        }`}
+                      />
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
               </FormControl>
               {error && <p className="error-message">{error.message}</p>}
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="button" onClick={void onSubmitApiKey}>
-          Submit API Key
-        </Button>
-        <Button type="button" onClick={onSubmitLicenseKey}>
-          Regenerate License Key
-        </Button>
       </form>
     </Form>
   );
