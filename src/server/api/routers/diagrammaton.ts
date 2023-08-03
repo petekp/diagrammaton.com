@@ -1,6 +1,10 @@
 import { Configuration, OpenAIApi } from "openai";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import {
   GPTModels,
   functions,
@@ -8,8 +12,8 @@ import {
 } from "~/plugins/diagrammaton/lib";
 
 export const diagrammatonRouter = createTRPCRouter({
-  generateMermaidSyntax: protectedProcedure
-    .meta({ openapi: { method: "GET", path: "/generate" } })
+  generateMermaidSyntax: publicProcedure
+    .meta({ openapi: { method: "POST", path: "/generate" } })
     .input(
       z.object({
         licenseKey: z.string(),
@@ -17,7 +21,9 @@ export const diagrammatonRouter = createTRPCRouter({
         model: z.string().optional().default(GPTModels["gpt3"]),
       })
     )
+    .output(z.string())
     .mutation(async ({ ctx, input }) => {
+      console.log({ input });
       const licenseKeys = await ctx.prisma.licenseKey.findMany({
         where: {
           key: input.licenseKey,
