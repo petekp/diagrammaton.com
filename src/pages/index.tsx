@@ -177,6 +177,7 @@ function AccountForm() {
   const createDiagram = async () => {
     const newDiagram = await generateDiagram.mutateAsync({
       diagramDescription,
+      licenseKey: licenseKeyRef.current?.value || "",
     });
     console.log(newDiagram);
   };

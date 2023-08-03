@@ -9,23 +9,33 @@ import {
 
 export const diagrammatonRouter = createTRPCRouter({
   generateMermaidSyntax: protectedProcedure
+    .meta({ openapi: { method: "GET", path: "/generate" } })
     .input(
       z.object({
+        licenseKey: z.string(),
         diagramDescription: z.string(),
         model: z.string().optional().default(GPTModels["gpt3"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const licenseKeys = await ctx.prisma.licenseKey.findMany({
+        where: {
+          key: input.licenseKey,
+        },
+      });
+
+      if (!licenseKeys.length) {
+        throw new Error("Invalid license key");
+      }
+
       const user = await ctx.prisma.user.findUnique({
         where: {
-          id: ctx.session.user.id,
+          id: licenseKeys[0]?.userId,
         },
         select: {
           openaiApiKey: true,
         },
       });
-
-      console.log({ user });
 
       const apiKey = user?.openaiApiKey;
 
