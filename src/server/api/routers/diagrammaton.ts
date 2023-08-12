@@ -1,19 +1,17 @@
 import { Configuration, OpenAIApi } from "openai";
 import { z } from "zod";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   GPTModels,
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
 
+import parser from "~/plugins/diagrammaton/grammar.js";
+
 export const diagrammatonRouter = createTRPCRouter({
   generateMermaidSyntax: publicProcedure
-    .meta({ openapi: { method: "POST", path: "/generate" } })
+    .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
     .input(
       z.object({
         licenseKey: z.string(),
@@ -21,7 +19,7 @@ export const diagrammatonRouter = createTRPCRouter({
         model: z.string().optional().default(GPTModels["gpt3"]),
       })
     )
-    .output(z.string())
+    .output(z.any())
     .mutation(async ({ ctx, input }) => {
       console.log({ input });
       const licenseKeys = await ctx.prisma.licenseKey.findMany({
@@ -91,7 +89,8 @@ export const diagrammatonRouter = createTRPCRouter({
           ``
         );
 
-        return combinedSteps;
+        const parsedGrammar = parser.parse(combinedSteps);
+        return parsedGrammar;
       } else {
         throw new Error("Unknown error 🫠");
       }

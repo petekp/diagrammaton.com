@@ -8,7 +8,8 @@
     "postinstall": "prisma generate",
     "lint": "next lint",
     "start": "next start",
-    "db:push": "dotenv -e .env.local -- npx prisma db push"
+    "db:push": "dotenv -e .env.local -- npx prisma db push",
+    "watch:diagrammaton:grammar": "nodemon --watch ./src/plugins/diagrammaton/grammar.peggy --exec 'npx peggy -o ./src/plugins/diagrammaton/grammar.js ./src/plugins/diagrammaton/grammar.peggy'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.1.1",
@@ -52,6 +53,8 @@
     "autoprefixer": "^10.4.14",
     "eslint": "^8.40.0",
     "eslint-config-next": "^13.4.2",
+    "nodemon": "^3.0.1",
+    "peggy": "^3.0.2",
     "postcss": "^8.4.21",
     "prettier": "^2.8.8",
     "prettier-plugin-tailwindcss": "^0.2.8",

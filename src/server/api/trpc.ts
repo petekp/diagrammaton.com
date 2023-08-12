@@ -8,7 +8,7 @@
  */
 
 import { initTRPC, TRPCError } from "@trpc/server";
-import { OpenApiMeta } from "trpc-openapi";
+import { type OpenApiMeta } from "trpc-openapi";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
 import superjson from "superjson";
