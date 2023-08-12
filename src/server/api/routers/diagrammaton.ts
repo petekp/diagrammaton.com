@@ -10,7 +10,7 @@ import {
 import parser from "~/plugins/diagrammaton/grammar.js";
 
 export const diagrammatonRouter = createTRPCRouter({
-  generateMermaidSyntax: publicProcedure
+  generate: publicProcedure
     .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
     .input(
       z.object({
@@ -19,7 +19,7 @@ export const diagrammatonRouter = createTRPCRouter({
         model: z.string().optional().default(GPTModels["gpt3"]),
       })
     )
-    .output(z.any())
+    .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
       console.log({ input });
       const licenseKeys = await ctx.prisma.licenseKey.findMany({
@@ -81,16 +81,18 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new Error("Unable to parse, please try again.");
         }
 
-        console.log({ steps });
-
         const combinedSteps = steps.reduce(
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           (acc: string, curr: string[]) => acc.concat(`${curr}\n`),
           ``
         );
 
+        console.log({ combinedSteps });
+
         const parsedGrammar = parser.parse(combinedSteps);
-        return parsedGrammar;
+        console.log({ parsedGrammar });
+        const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
+        return filteredGrammar;
       } else {
         throw new Error("Unknown error 🫠");
       }

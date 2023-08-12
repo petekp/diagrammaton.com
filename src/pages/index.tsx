@@ -130,7 +130,7 @@ function AccountForm() {
   const { data: sessionData } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation();
   const currentLicenseKey = api.license.getUserLicenseKey.useQuery();
-  const generateDiagram = api.diagrammaton.generateMermaidSyntax.useMutation();
+  const generateDiagram = api.diagrammaton.generate.useMutation();
   const saveApiKey = api.apiKey.setUserApiKey.useMutation();
   const lastfourdigitsquery = api.apiKey.getUserKeyLastFour.useQuery();
 
