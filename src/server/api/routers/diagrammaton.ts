@@ -8,6 +8,7 @@ import {
 } from "~/plugins/diagrammaton/lib";
 
 import parser from "~/plugins/diagrammaton/grammar.js";
+import { TRPCError } from "@trpc/server";
 
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
@@ -21,7 +22,6 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
-      console.log({ input });
       const licenseKeys = await ctx.prisma.licenseKey.findMany({
         where: {
           key: input.licenseKey,
@@ -29,7 +29,10 @@ export const diagrammatonRouter = createTRPCRouter({
       });
 
       if (!licenseKeys.length) {
-        throw new Error("Invalid license key");
+        throw new TRPCError({
+          message: "Invalid license key",
+          code: "FORBIDDEN",
+        });
       }
 
       const user = await ctx.prisma.user.findUnique({
@@ -44,7 +47,10 @@ export const diagrammatonRouter = createTRPCRouter({
       const apiKey = user?.openaiApiKey;
 
       if (!apiKey) {
-        throw new Error("No API key found");
+        throw new TRPCError({
+          message: "No Open AI API key registered",
+          code: "BAD_REQUEST",
+        });
       }
 
       const configuration = new Configuration({
@@ -74,11 +80,17 @@ export const diagrammatonRouter = createTRPCRouter({
         };
 
         if (message) {
-          throw new Error(message);
+          throw new TRPCError({
+            message,
+            code: "INTERNAL_SERVER_ERROR",
+          });
         }
 
         if (!steps?.length) {
-          throw new Error("Unable to parse, please try again.");
+          throw new TRPCError({
+            message: "Unable to parse, please try again.",
+            code: "INTERNAL_SERVER_ERROR",
+          });
         }
 
         const combinedSteps = steps.reduce(
@@ -94,7 +106,10 @@ export const diagrammatonRouter = createTRPCRouter({
         const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
         return filteredGrammar;
       } else {
-        throw new Error("Unknown error 🫠");
+        throw new TRPCError({
+          message: "Error generating diagram 🫠",
+          code: "INTERNAL_SERVER_ERROR",
+        });
       }
     }),
 });

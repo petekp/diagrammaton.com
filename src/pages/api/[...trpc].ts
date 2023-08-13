@@ -6,7 +6,6 @@ import { appRouter } from "~/server/api/root";
 import { createTRPCContext } from "~/server/api/trpc";
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  // Setup CORS
   await cors(req, res, {
     origin: "null",
     methods: ["POST", "HEAD", "OPTIONS"],
