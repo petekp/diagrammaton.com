@@ -31,7 +31,7 @@ export const diagrammatonRouter = createTRPCRouter({
       if (!licenseKeys.length) {
         throw new TRPCError({
           message: "Invalid license key",
-          code: "FORBIDDEN",
+          code: "UNAUTHORIZED",
         });
       }
 
@@ -82,7 +82,7 @@ export const diagrammatonRouter = createTRPCRouter({
         if (message) {
           throw new TRPCError({
             message,
-            code: "INTERNAL_SERVER_ERROR",
+            code: "UNPROCESSABLE_CONTENT",
           });
         }
 

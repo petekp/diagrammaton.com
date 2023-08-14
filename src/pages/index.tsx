@@ -1,10 +1,18 @@
+"use client";
+
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getProviders, signIn, signOut, useSession } from "next-auth/react";
+import {
+  getProviders,
+  signIn,
+  signOut,
+  useSession,
+  getSession,
+} from "next-auth/react";
 import { type SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,9 +36,13 @@ import {
 } from "../../@/components/ui/card";
 import { Copy, RefreshCcw } from "lucide-react";
 
+const apiKeyMask = "sk-•••••••••••••••••••••••••";
+
 export default function Home({
   providers,
+  sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  console.log("home", sessionData);
   return (
     <>
       <Head>
@@ -39,7 +51,7 @@ export default function Home({
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center">
-        <SignIn providers={providers} />
+        <SignIn providers={providers} sessionData={sessionData} />
       </main>
     </>
   );
@@ -47,8 +59,9 @@ export default function Home({
 
 function SignIn({
   providers,
+  sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-  const { data: sessionData } = useSession();
+  console.log("signin", sessionData);
 
   return (
     <div className="container relative mx-auto w-full flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-1 lg:px-0">
@@ -127,7 +140,7 @@ function AccountForm() {
     "a basic authentication flow"
   );
 
-  const { data: sessionData } = useSession();
+  const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation();
   const currentLicenseKey = api.license.getUserLicenseKey.useQuery();
   const generateDiagram = api.diagrammaton.generate.useMutation();
@@ -150,22 +163,28 @@ function AccountForm() {
     setValue(
       "openaiApiKey",
       lastfourdigitsquery.data
-        ? `sk-•••••••••••••••••••••••••${lastfourdigitsquery.data.slice(-4)}`
+        ? `${apiKeyMask}${lastfourdigitsquery.data.slice(-4)}`
         : ""
     );
-  }, [sessionData, lastfourdigitsquery.data, setValue]);
+  }, [session, lastfourdigitsquery.data, setValue]);
 
   useEffect(() => {
     setValue("licenseKey", currentLicenseKey.data || "");
-  }, [sessionData, currentLicenseKey.data, setValue]);
+  }, [session, currentLicenseKey.data, setValue]);
 
   const onSubmitApiKey: SubmitHandler<z.infer<typeof formSchema>> = async (
     data
   ) => {
-    await saveApiKey.mutateAsync({
-      userId: sessionData?.user?.id || "",
+    const lastfour = await saveApiKey.mutateAsync({
+      userId: session?.user?.id || "",
       apiKey: data.openaiApiKey,
     });
+
+    if (!lastfour) {
+      return;
+    }
+
+    setValue("openaiApiKey", `${apiKeyMask}${lastfour}`);
   };
 
   const onSubmitLicenseKey = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -187,6 +206,9 @@ function AccountForm() {
     if (!licenseKeyRef.current?.value) {
       return;
     }
+
+    if (!navigator.clipboard) return;
+
     navigator.clipboard
       .writeText(licenseKeyRef?.current?.value || "")
       .then(() => {
@@ -328,9 +350,14 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   //   return { redirect: { destination: "/" } };
   // }
 
+  const sessionData = await getSession(context);
+
   const providers = await getProviders();
 
   return {
-    props: { providers: providers ?? [] },
+    props: {
+      providers: providers ?? [],
+      sessionData: sessionData ?? null,
+    },
   };
 }

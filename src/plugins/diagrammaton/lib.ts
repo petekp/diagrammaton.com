@@ -51,7 +51,7 @@ export const functions = [
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful AI assistant with deep knowledge and expertise in software UI and UX design that helps translate natural language descriptions of UI and UX flows into valid Mermaid diagram syntax. Call print_diagram if you are able to successfully parse the user's natural language description into valid Mermaid syntax, otherwise call print_error.
+    content: `You are a helpful AI assistant with deep knowledge and expertise in software UI and UX design that helps translate natural language descriptions of UI and UX flows into valid Mermaid diagram syntax. You must call print_diagram if you are able to successfully parse the user's natural language description into valid Mermaid syntax, otherwise you must call print_error.
 
     [Example 1]
 
