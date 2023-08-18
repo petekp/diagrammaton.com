@@ -58,12 +58,14 @@ export const diagrammatonRouter = createTRPCRouter({
           },
         });
 
+        const stringifiedUser = JSON.stringify(user);
+
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
           rollbar.error({
             message: "No Open AI API key registered",
-            user,
+            user: stringifiedUser,
             input,
           });
 
@@ -102,7 +104,7 @@ export const diagrammatonRouter = createTRPCRouter({
           if (message) {
             rollbar.error({
               message,
-              user,
+              user: stringifiedUser,
               input,
             });
 
@@ -115,9 +117,9 @@ export const diagrammatonRouter = createTRPCRouter({
           if (!steps?.length) {
             rollbar.error({
               message: "Unable to parse",
-              user,
+              user: stringifiedUser,
               input,
-              choices,
+              choices: JSON.stringify(choices),
             });
 
             throw new TRPCError({
@@ -140,16 +142,16 @@ export const diagrammatonRouter = createTRPCRouter({
 
           rollbar.info({
             message: "Diagram generated",
-            user,
+            user: stringifiedUser,
             input,
-            output: filteredGrammar,
+            output: JSON.stringify(filteredGrammar),
           });
 
           return filteredGrammar;
         } else {
           rollbar.error({
             message: "Error generating diagram",
-            user,
+            user: stringifiedUser,
             input,
           });
           throw new TRPCError({
