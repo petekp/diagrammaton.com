@@ -30,7 +30,6 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
-      console.log("generate diagram start");
       try {
         const licenseKeys = await ctx.prisma.licenseKey.findMany({
           where: {
@@ -39,6 +38,11 @@ export const diagrammatonRouter = createTRPCRouter({
         });
 
         if (!licenseKeys.length) {
+          rollbar.error({
+            message: "Invalid license key",
+            input,
+          });
+
           throw new TRPCError({
             message: "Invalid license key",
             code: "UNAUTHORIZED",
@@ -57,6 +61,12 @@ export const diagrammatonRouter = createTRPCRouter({
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
+          rollbar.error({
+            message: "No Open AI API key registered",
+            user,
+            input,
+          });
+
           throw new TRPCError({
             message: "No Open AI API key registered",
             code: "BAD_REQUEST",
@@ -90,6 +100,12 @@ export const diagrammatonRouter = createTRPCRouter({
           };
 
           if (message) {
+            rollbar.error({
+              message,
+              user,
+              input,
+            });
+
             throw new TRPCError({
               message,
               code: "UNPROCESSABLE_CONTENT",
@@ -97,6 +113,13 @@ export const diagrammatonRouter = createTRPCRouter({
           }
 
           if (!steps?.length) {
+            rollbar.error({
+              message: "Unable to parse",
+              user,
+              input,
+              choices,
+            });
+
             throw new TRPCError({
               message: "Unable to parse, please try again.",
               code: "INTERNAL_SERVER_ERROR",
@@ -115,10 +138,20 @@ export const diagrammatonRouter = createTRPCRouter({
           console.log({ parsedGrammar });
           const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
 
-          rollbar.log("Hello world!");
+          rollbar.info({
+            message: "Diagram generated",
+            user,
+            input,
+            output: filteredGrammar,
+          });
 
           return filteredGrammar;
         } else {
+          rollbar.error({
+            message: "Error generating diagram",
+            user,
+            input,
+          });
           throw new TRPCError({
             message: "Error generating diagram 🫠",
             code: "INTERNAL_SERVER_ERROR",
@@ -126,6 +159,7 @@ export const diagrammatonRouter = createTRPCRouter({
         }
       } catch (err) {
         rollbar.error(err as LogArgument);
+
         throw new TRPCError({
           message: "Fundamental terrible error",
           code: "INTERNAL_SERVER_ERROR",
