@@ -9,11 +9,16 @@ const config = {
   async headers() {
     return [
       {
-        source: "/",
+        source: "/api/diagrammaton/generate",
         headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
           {
-            key: "Bypass-Tunnel-Reminder",
-            value: "Bypass-Tunnel-Reminder",
+            key: "Access-Control-Allow-Methods",
+            value: "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "*",
           },
         ],
       },
