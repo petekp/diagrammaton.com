@@ -24,6 +24,7 @@ export const env = createEnv({
     GOOGLE_ID: z.string(),
     GOOGLE_SECRET: z.string(),
     OPENAPI_BASE_URL: z.string(),
+    ROLLBAR_ACCESS_TOKEN: z.string(),
   },
 
   /**
@@ -47,6 +48,7 @@ export const env = createEnv({
     GOOGLE_ID: process.env.GOOGLE_ID,
     GOOGLE_SECRET: process.env.GOOGLE_SECRET,
     OPENAPI_BASE_URL: process.env.OPENAPI_BASE_URL,
+    ROLLBAR_ACCESS_TOKEN: process.env.ROLLBAR_ACCESS_TOKEN,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
