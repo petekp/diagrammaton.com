@@ -1,16 +1,13 @@
 import { type NextApiRequest, type NextApiResponse } from "next";
-import cors from "nextjs-cors";
 import { createOpenApiNextHandler } from "trpc-openapi";
 
 import { appRouter } from "~/server/api/root";
 import { createTRPCContext } from "~/server/api/trpc";
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  await cors(req, res, {
-    origin: "*",
-    methods: ["POST", "HEAD", "OPTIONS"],
-    allowedHeaders: "*",
-  });
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, HEAD, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
 
   // Handle incoming OpenAPI requests
   return createOpenApiNextHandler({
