@@ -1,11 +1,20 @@
 import { Configuration, OpenAIApi } from "openai";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import Rollbar from "rollbar";
 import {
   GPTModels,
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
+
+const rollbar = new Rollbar({
+  accessToken: "7d1a014b53744111a9a98b51fc062b77",
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+});
+
+// record a generic message and send it to Rollbar
 
 import parser from "~/plugins/diagrammaton/grammar.js";
 import { TRPCError } from "@trpc/server";
@@ -104,6 +113,7 @@ export const diagrammatonRouter = createTRPCRouter({
         const parsedGrammar = parser.parse(combinedSteps);
         console.log({ parsedGrammar });
         const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
+        rollbar.log(filteredGrammar);
         return filteredGrammar;
       } else {
         throw new TRPCError({
