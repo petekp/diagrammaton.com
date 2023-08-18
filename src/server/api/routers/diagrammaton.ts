@@ -8,12 +8,6 @@ import {
   createMessages,
 } from "~/plugins/diagrammaton/lib";
 
-const rollbar = new Rollbar({
-  accessToken: "7d1a014b53744111a9a98b51fc062b77",
-  captureUncaught: true,
-  captureUnhandledRejections: true,
-});
-
 // record a generic message and send it to Rollbar
 
 import parser from "~/plugins/diagrammaton/grammar.js";
@@ -113,7 +107,15 @@ export const diagrammatonRouter = createTRPCRouter({
         const parsedGrammar = parser.parse(combinedSteps);
         console.log({ parsedGrammar });
         const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
-        rollbar.log(filteredGrammar);
+
+        const rollbar = new Rollbar({
+          accessToken: "7d1a014b53744111a9a98b51fc062b77",
+          captureUncaught: true,
+          captureUnhandledRejections: true,
+        });
+
+        rollbar.log("Hello world!");
+
         return filteredGrammar;
       } else {
         throw new TRPCError({
