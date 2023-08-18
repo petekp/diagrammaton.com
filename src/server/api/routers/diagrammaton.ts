@@ -54,6 +54,8 @@ export const diagrammatonRouter = createTRPCRouter({
             id: licenseKeys[0]?.userId,
           },
           select: {
+            id: true,
+            email: true,
             openaiApiKey: true,
           },
         });
