@@ -30,7 +30,7 @@ const formSchema = z.object({
     }),
 });
 
-export function AccountView() {
+export default function AccountView() {
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
   const [diagramDescription, setDiagramDescription] = useState(

@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../@/components/ui/card";
-import { AccountView } from "./components/AccountView";
+import AccountView from "./components/AccountView";
 
 export default function Home({
   providers,
