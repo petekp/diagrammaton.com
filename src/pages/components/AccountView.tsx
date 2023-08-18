@@ -182,7 +182,7 @@ export function AccountView() {
                     placeholder={"Generate a key"}
                     {...field}
                     ref={licenseKeyRef}
-                    value={licenseKeyQuery.data || field.value}
+                    value={licenseKeyQuery.data || (field.value as string)}
                     className="mr-1 flex-1"
                   />
                   <div className="flex w-full flex-grow flex-row">
