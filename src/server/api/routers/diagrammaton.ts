@@ -60,7 +60,7 @@ export const diagrammatonRouter = createTRPCRouter({
           },
         });
 
-        const stringifiedUser = JSON.stringify(user);
+        const stringifiedUser = JSON.stringify({ ...user, openaiApiKey: "" });
 
         const apiKey = user?.openaiApiKey;
 
