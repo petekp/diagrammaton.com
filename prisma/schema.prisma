@@ -8,6 +8,11 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+enum Plugin {
+    Diagrammaton
+    Cluster
+}
+
 model Account {
     id                String  @id @default(cuid())
     userId            String
@@ -63,10 +68,12 @@ model VerificationToken {
 }
 
 model PluginConfiguration {
-    id       String @id @default(cuid())
-    userId   String
-    settings Json
-    user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id             String  @id @default(cuid())
+    userId         String
+    plugin         Plugin
+    settings       Json
+    allowTelemetry Boolean @default(true)
+    user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Usage {
@@ -102,12 +109,22 @@ model Team {
 }
 
 model LicenseKey {
-    id        String   @id @default(cuid())
-    userId    String   @unique
+    id        String             @id @default(cuid())
+    userId    String             @unique
+    plugins   LicenseKeyPlugin[]
     uses      Int
-    revoked   Boolean  @default(false)
+    revoked   Boolean            @default(false)
     expiresAt DateTime
-    key       String   @unique
-    createdAt DateTime @default(now())
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    key       String             @unique
+    createdAt DateTime           @default(now())
+    user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LicenseKeyPlugin {
+    id           String     @id @default(cuid())
+    licenseKeyId String
+    plugin       Plugin
+    licenseKey   LicenseKey @relation(fields: [licenseKeyId], references: [id])
+
+    @@unique([licenseKeyId, plugin])
 }
