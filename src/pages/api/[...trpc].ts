@@ -7,7 +7,7 @@ import { createTRPCContext } from "~/server/api/trpc";
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   await cors(req, res, {
-    origin: "null",
+    origin: "*",
     methods: ["POST", "HEAD", "OPTIONS"],
     allowedHeaders: "*",
   });
