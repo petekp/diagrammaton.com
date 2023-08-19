@@ -100,9 +100,9 @@ export const diagrammatonRouter = createTRPCRouter({
           model: input.model,
           functions,
           function_call: "auto",
-          temperature: 1,
+          temperature: 0,
           messages: createMessages(input.diagramDescription),
-          max_tokens: 3000,
+          max_tokens: 5000,
         });
 
         const choices = chatCompletion.data.choices;
@@ -116,7 +116,8 @@ export const diagrammatonRouter = createTRPCRouter({
           };
 
           if (message) {
-            rollbar.error(message, {
+            rollbar.error("GPT failed to use function_call", {
+              message,
               user: stringifiedUser,
               input,
             });
