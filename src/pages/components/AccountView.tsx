@@ -91,7 +91,6 @@ export default function AccountView() {
       diagramDescription,
       licenseKey: licenseKeyRef.current?.value || "",
     });
-    console.log(newDiagram);
   };
 
   function copyLicenseKey(e: React.MouseEvent<HTMLButtonElement>) {

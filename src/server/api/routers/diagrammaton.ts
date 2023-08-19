@@ -30,6 +30,21 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
+      rollbar.configure({
+        onSendCallback: function (isUncaught, args, payload) {
+          console.log("Rollbar called", {
+            isUncaught,
+            args,
+            payload,
+          });
+        },
+      });
+
+      rollbar.info("Generating diagram", {
+        diagramDescription: input.diagramDescription,
+        model: input.model,
+      });
+
       try {
         const licenseKeys = await ctx.prisma.licenseKey.findMany({
           where: {
@@ -93,7 +108,6 @@ export const diagrammatonRouter = createTRPCRouter({
         const choices = chatCompletion.data.choices;
 
         if (choices && choices.length > 0) {
-          console.log(choices[0]?.message?.function_call);
           const { steps, message } = JSON.parse(
             choices[0]?.message?.function_call?.arguments as string
           ) as {
@@ -102,8 +116,7 @@ export const diagrammatonRouter = createTRPCRouter({
           };
 
           if (message) {
-            rollbar.error({
-              message,
+            rollbar.error(message, {
               user: stringifiedUser,
               input,
             });
@@ -133,10 +146,7 @@ export const diagrammatonRouter = createTRPCRouter({
             ``
           );
 
-          console.log({ combinedSteps });
-
           const parsedGrammar = parser.parse(combinedSteps);
-          console.log({ parsedGrammar });
           const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
 
           rollbar.info("Diagram generated", {

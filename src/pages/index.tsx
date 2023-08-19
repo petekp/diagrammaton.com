@@ -38,8 +38,6 @@ function SignIn({
   providers,
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-  console.log("signin", sessionData);
-
   return (
     <div className="container relative mx-auto w-full flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-1 lg:px-0">
       <div className="lg:p-8">
