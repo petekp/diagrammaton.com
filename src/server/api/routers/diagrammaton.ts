@@ -38,8 +38,7 @@ export const diagrammatonRouter = createTRPCRouter({
         });
 
         if (!licenseKeys.length) {
-          rollbar.error({
-            message: "Invalid license key",
+          rollbar.error("Invalid license key", {
             input,
           });
 
@@ -65,8 +64,7 @@ export const diagrammatonRouter = createTRPCRouter({
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
-          rollbar.error({
-            message: "No Open AI API key registered",
+          rollbar.error("No Open AI API key registered", {
             user: stringifiedUser,
             input,
           });
@@ -117,8 +115,7 @@ export const diagrammatonRouter = createTRPCRouter({
           }
 
           if (!steps?.length) {
-            rollbar.error({
-              message: "Unable to parse",
+            rollbar.error("Unable to parse", {
               user: stringifiedUser,
               input,
               choices: JSON.stringify(choices),
@@ -142,8 +139,7 @@ export const diagrammatonRouter = createTRPCRouter({
           console.log({ parsedGrammar });
           const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
 
-          rollbar.info({
-            message: "Diagram generated",
+          rollbar.info("Diagram generated", {
             user: stringifiedUser,
             input,
             output: JSON.stringify(filteredGrammar),
@@ -151,8 +147,7 @@ export const diagrammatonRouter = createTRPCRouter({
 
           return filteredGrammar;
         } else {
-          rollbar.error({
-            message: "Error generating diagram",
+          rollbar.error("Error generating diagram", {
             user: stringifiedUser,
             input,
           });
@@ -162,7 +157,7 @@ export const diagrammatonRouter = createTRPCRouter({
           });
         }
       } catch (err) {
-        rollbar.error(err as LogArgument);
+        rollbar.error("Fatal error", err as LogArgument);
 
         throw new TRPCError({
           message: "Fundamental terrible error",
