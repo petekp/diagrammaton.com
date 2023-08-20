@@ -12,6 +12,8 @@ import parser from "~/plugins/diagrammaton/grammar.js";
 import { TRPCError } from "@trpc/server";
 import { logError, logInfo } from "~/utils/log";
 
+export const runtime = "edge";
+
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
     .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
