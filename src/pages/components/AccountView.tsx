@@ -138,7 +138,7 @@ export default function AccountView() {
                     disabled={apiKeyFieldIsLoading}
                     placeholder={"Enter key"}
                     {...field}
-                    value={apiKeyDefaultValue}
+                    defaultValue={apiKeyDefaultValue}
                     className="mr-1 flex flex-grow"
                   />
                   <Button
@@ -181,7 +181,9 @@ export default function AccountView() {
                     placeholder={"Generate a key"}
                     {...field}
                     ref={licenseKeyRef}
-                    value={licenseKeyQuery.data || (field.value as string)}
+                    defaultValue={
+                      licenseKeyQuery.data || (field.value as string)
+                    }
                     className="mr-1 flex-1"
                   />
                   <div className="flex w-full flex-grow flex-row">
