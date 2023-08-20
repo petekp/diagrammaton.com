@@ -1,22 +1,16 @@
 import { Configuration, OpenAIApi } from "openai";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import Rollbar, { type LogArgument } from "rollbar";
+
 import {
   GPTModels,
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
-import { env } from "~/env.mjs";
-
-const rollbar = new Rollbar({
-  accessToken: env.ROLLBAR_ACCESS_TOKEN,
-  captureUncaught: true,
-  captureUnhandledRejections: true,
-});
 
 import parser from "~/plugins/diagrammaton/grammar.js";
 import { TRPCError } from "@trpc/server";
+import { logError, logInfo } from "~/utils/log";
 
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
@@ -30,17 +24,14 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
-      rollbar.configure({
-        onSendCallback: function (isUncaught, args, payload) {
-          console.log("Rollbar called", {
-            isUncaught,
-            args,
-            payload,
-          });
-        },
-      });
+      const timeout = setTimeout(() => {
+        logError("Function is about to timeout", {
+          input,
+        });
+        // 20 seconds
+      }, 20000);
 
-      rollbar.info("Generating diagram", {
+      logInfo("Generate diagram", {
         diagramDescription: input.diagramDescription,
         model: input.model,
       });
@@ -53,7 +44,7 @@ export const diagrammatonRouter = createTRPCRouter({
         });
 
         if (!licenseKeys.length) {
-          rollbar.error("Invalid license key", {
+          logError("Invalid license key", {
             input,
           });
 
@@ -79,7 +70,7 @@ export const diagrammatonRouter = createTRPCRouter({
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
-          rollbar.error("No Open AI API key registered", {
+          logError("No Open AI API key registered", {
             user: stringifiedUser,
             input,
           });
@@ -116,7 +107,7 @@ export const diagrammatonRouter = createTRPCRouter({
           };
 
           if (message) {
-            rollbar.error("GPT failed to use function_call", {
+            logError("GPT failed to use function_call", {
               message,
               user: stringifiedUser,
               input,
@@ -129,7 +120,7 @@ export const diagrammatonRouter = createTRPCRouter({
           }
 
           if (!steps?.length) {
-            rollbar.error("Unable to parse", {
+            logError("Unable to parse", {
               user: stringifiedUser,
               input,
               choices: JSON.stringify(choices),
@@ -150,15 +141,15 @@ export const diagrammatonRouter = createTRPCRouter({
           const parsedGrammar = parser.parse(combinedSteps);
           const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
 
-          rollbar.info("Diagram generated", {
+          logInfo("Diagram generated", {
             user: stringifiedUser,
             input,
-            output: JSON.stringify(filteredGrammar),
+            output: "stubbed output",
           });
 
           return filteredGrammar;
         } else {
-          rollbar.error("Error generating diagram", {
+          logError("Error generating diagram", {
             user: stringifiedUser,
             input,
           });
@@ -168,12 +159,14 @@ export const diagrammatonRouter = createTRPCRouter({
           });
         }
       } catch (err) {
-        rollbar.error("Fatal error", err as LogArgument);
+        logError("Fatal error", err as TRPCError);
 
         throw new TRPCError({
           message: "Fundamental terrible error",
           code: "INTERNAL_SERVER_ERROR",
         });
+      } finally {
+        clearTimeout(timeout);
       }
     }),
 });

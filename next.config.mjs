@@ -6,24 +6,6 @@ await import("./src/env.mjs");
 
 /** @type {import("next").NextConfig} */
 const config = {
-  async headers() {
-    return [
-      {
-        source: "/api/diagrammaton/generate",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          {
-            key: "Access-Control-Allow-Methods",
-            value: "GET,OPTIONS,PATCH,DELETE,POST,PUT",
-          },
-          {
-            key: "Access-Control-Allow-Headers",
-            value: "*",
-          },
-        ],
-      },
-    ];
-  },
   reactStrictMode: true,
 
   /**
