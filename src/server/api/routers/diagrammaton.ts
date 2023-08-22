@@ -1,15 +1,16 @@
+import { TRPCError, type inferProcedureInput } from "@trpc/server";
+import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
 import { Configuration, OpenAIApi } from "openai";
+import { type LogArgument } from "rollbar";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import parser from "~/plugins/diagrammaton/grammar.js";
 import {
   GPTModels,
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
-
-import parser from "~/plugins/diagrammaton/grammar.js";
-import { TRPCError } from "@trpc/server";
 import { logError, logInfo } from "~/utils/log";
 
 export const runtime = "edge";
@@ -27,13 +28,12 @@ export const diagrammatonRouter = createTRPCRouter({
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
       if (!input.diagramDescription) {
-        logError("No diagram description provided", {
-          input,
-        });
-
-        throw new TRPCError({
+        handleError({
           message: "No diagram description provided",
           code: "BAD_REQUEST",
+          data: {
+            input,
+          },
         });
       }
       const timeout = setTimeout(() => {
@@ -41,7 +41,7 @@ export const diagrammatonRouter = createTRPCRouter({
           input,
         });
         // 55 seconds
-      }, 50000);
+      }, 55000);
 
       logInfo("Generate diagram", {
         diagramDescription: input.diagramDescription,
@@ -56,13 +56,10 @@ export const diagrammatonRouter = createTRPCRouter({
         });
 
         if (!licenseKeys.length) {
-          logError("Invalid license key", {
-            input,
-          });
-
-          throw new TRPCError({
+          handleError({
             message: "Invalid license key",
             code: "UNAUTHORIZED",
+            data: { input },
           });
         }
 
@@ -77,20 +74,28 @@ export const diagrammatonRouter = createTRPCRouter({
           },
         });
 
+        if (!user) {
+          handleError({
+            message: "Error fetching user",
+            code: "INTERNAL_SERVER_ERROR",
+            data: { input },
+          });
+        }
+
         const stringifiedUser = JSON.stringify({ ...user, openaiApiKey: "" });
 
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
-          logError("No Open AI API key registered", {
-            user: stringifiedUser,
-            input,
-          });
-
-          throw new TRPCError({
+          handleError({
             message: "No Open AI API key registered",
             code: "BAD_REQUEST",
+            data: { user: stringifiedUser, input },
           });
+        }
+
+        if (typeof apiKey !== "string") {
+          throw new Error("API key must be a string");
         }
 
         const configuration = new Configuration({
@@ -99,132 +104,148 @@ export const diagrammatonRouter = createTRPCRouter({
 
         const openai = new OpenAIApi(configuration);
 
-        let chatCompletion;
-
-        try {
-          console.log("calling GPT endpoint");
-          chatCompletion = await openai.createChatCompletion({
-            model: input.model,
-            functions,
-            function_call: "auto",
-            temperature: 0,
-            messages: createMessages(input.diagramDescription),
-            max_tokens: 3000,
-          });
-        } catch (err: unknown) {
-          if ((err as { status: number }).status === 401) {
-            logError("Invalid OpenAI API key", {
-              user: stringifiedUser,
-              input,
-            });
-
-            throw new TRPCError({
-              message: "Invalid OpenAI API key",
-              code: "UNAUTHORIZED",
-            });
-          }
-
-          logError("OpenAI API error", {
+        const combinedSteps = await getChatCompletion({
+          data: {
             user: stringifiedUser,
             input,
-            error: err,
-          });
-        }
-
-        const choices = chatCompletion?.data.choices;
-
-        console.log("choices", choices);
-
-        if (choices && choices.length > 0) {
-          const { steps, message } = JSON.parse(
-            choices[0]?.message?.function_call?.arguments as string
-          ) as {
-            steps: string[][];
-            message: string;
-          };
-
-          if (message) {
-            logError("GPT failed to use function_call", {
-              message,
-              user: stringifiedUser,
-              input,
-            });
-
-            throw new TRPCError({
-              message,
-              code: "UNPROCESSABLE_CONTENT",
-            });
-          }
-
-          if (!steps?.length) {
-            logError("Unable to parse", {
-              user: stringifiedUser,
-              input,
-              choices: JSON.stringify(choices),
-            });
-
-            throw new TRPCError({
-              message: "Unable to parse, please try again.",
-              code: "INTERNAL_SERVER_ERROR",
-            });
-          }
-
-          const combinedSteps = steps.reduce(
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            (acc: string, curr: string[]) => acc.concat(`${curr}\n`),
-            ``
-          );
-
-          let parsedGrammar;
-
-          try {
-            parsedGrammar = parser.parse(combinedSteps);
-          } catch (err) {
-            logError("Unable to parse response", {
-              user: stringifiedUser,
-              input,
-              steps: combinedSteps,
-            });
-
-            throw new TRPCError({
-              message: "Unable to parse response, please try again.",
-              code: "INTERNAL_SERVER_ERROR",
-              cause: err,
-            });
-          }
-
-          const filteredGrammar: unknown[] = parsedGrammar.filter(Boolean);
-
-          logInfo("Diagram generated", {
-            user: stringifiedUser,
-            input,
-            output: "stubbed output",
-          });
-
-          return filteredGrammar;
-        } else {
-          logError("Error generating diagram", {
-            user: stringifiedUser,
-            input,
-          });
-          throw new TRPCError({
-            message: "Error generating diagram 🫠",
-            code: "INTERNAL_SERVER_ERROR",
-          });
-        }
-      } catch (err) {
-        logError("Fatal error", {
-          message: (err as TRPCError).message,
-          stack: (err as TRPCError).stack,
+          },
+          openai,
         });
 
-        throw new TRPCError({
-          message: "Fundamental terrible error",
+        const parsedGrammar = parser.parse(combinedSteps!);
+
+        handleError({
+          message: "Unable to parse response",
           code: "INTERNAL_SERVER_ERROR",
-          cause: err,
+          data: { user: stringifiedUser, input, steps: combinedSteps },
+        });
+
+        const filteredGrammar: unknown[] = (parsedGrammar as unknown[]).filter(
+          Boolean
+        );
+
+        logInfo("Diagram generated", {
+          user: stringifiedUser,
+          input,
+          output: "stubbed output",
+        });
+
+        if (!filteredGrammar.length) {
+          handleError({
+            message: "Unable to parse response",
+            code: "INTERNAL_SERVER_ERROR",
+            data: { user: stringifiedUser, input, steps: combinedSteps },
+          });
+        }
+
+        return filteredGrammar;
+      } catch (err) {
+        handleError({
+          message: "Fatal error",
+          code: "INTERNAL_SERVER_ERROR",
+          data: {
+            message: (err as TRPCError).message,
+            stack: (err as TRPCError).stack,
+          },
         });
       } finally {
         clearTimeout(timeout);
       }
+
+      return [];
     }),
 });
+
+async function getChatCompletion({
+  data,
+  openai,
+}: {
+  data: {
+    user: string;
+    input: inferProcedureInput<typeof diagrammatonRouter.generate>;
+  };
+  openai: OpenAIApi;
+}) {
+  let chatCompletion;
+
+  try {
+    console.log("calling GPT endpoint");
+    chatCompletion = await openai.createChatCompletion({
+      model: data.input.model || GPTModels["gpt3"],
+      functions,
+      function_call: "auto",
+      temperature: 0,
+      messages: createMessages(data.input.diagramDescription),
+      max_tokens: 3000,
+    });
+  } catch (err: unknown) {
+    console.log({ err });
+    if ((err as { status: number }).status === 401) {
+      handleError({
+        message: "Invalid OpenAI API key",
+        code: "UNAUTHORIZED",
+        data,
+      });
+    }
+
+    handleError({
+      message: "OpenAI API error",
+      code: "INTERNAL_SERVER_ERROR",
+      data,
+    });
+  }
+
+  const choices = chatCompletion?.data.choices;
+
+  if (choices && choices.length > 0) {
+    const { steps, message } = JSON.parse(
+      choices[0]?.message?.function_call?.arguments as string
+    ) as {
+      steps: string[][];
+      message: string;
+    };
+
+    if (message) {
+      handleError({
+        message: "GPT failed to use function_call",
+        code: "UNPROCESSABLE_CONTENT",
+        data,
+      });
+    }
+
+    if (!steps?.length) {
+      handleError({
+        message: "Unable to parse",
+        code: "INTERNAL_SERVER_ERROR",
+        data,
+      });
+    }
+
+    const combinedSteps = steps.reduce(
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      (acc: string, curr: string[]) => acc.concat(`${curr}\n`),
+      ``
+    );
+
+    return combinedSteps;
+  } else {
+    handleError({
+      message: "Error generating diagram",
+      code: "INTERNAL_SERVER_ERROR",
+      data,
+    });
+  }
+}
+
+function handleError({
+  message,
+  code,
+  data,
+}: {
+  message: string;
+  code: TRPC_ERROR_CODE_KEY;
+  data?: LogArgument;
+}) {
+  logError(message, data);
+  throw new TRPCError({ message, code });
+}
