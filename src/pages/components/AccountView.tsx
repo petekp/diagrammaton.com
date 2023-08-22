@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import { type SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useRef, useState } from "react";
+import { Copy, RefreshCcw } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { z } from "zod";
 
 import { api } from "~/utils/api";
@@ -14,28 +16,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { Copy, RefreshCcw } from "lucide-react";
-import { useSession } from "next-auth/react";
-
 const apiKeyMask = "sk-•••••••••••••••••••••••••";
 
 const formSchema = z.object({
   openaiApiKey: z
     .string()
     .min(50, {
-      message: "Invalid key length, please verify and try again.",
+      message: "Invalid OpenAI key length, please verify and try again.",
     })
     .startsWith("sk-", {
-      message: "Invalid key, please verify and try again.",
+      message: "Invalid OpenAI key format, please verify and try again.",
     }),
 });
 
 export default function AccountView() {
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
-  const [diagramDescription, setDiagramDescription] = useState(
-    "a basic authentication flow"
-  );
 
   const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation({
@@ -44,7 +40,6 @@ export default function AccountView() {
     },
   });
 
-  const generateDiagram = api.diagrammaton.generate.useMutation();
   const saveApiKey = api.apiKey.setUserApiKey.useMutation({
     onSuccess: () => {
       void utils.apiKey.invalidate();
@@ -66,6 +61,15 @@ export default function AccountView() {
 
   const { setValue } = form;
 
+  useEffect(() => {
+    if (apiKeyQuery.data) {
+      setValue("openaiApiKey", `${apiKeyMask}${apiKeyQuery.data}`);
+    }
+    if (licenseKeyQuery.data) {
+      setValue("licenseKey", licenseKeyQuery.data);
+    }
+  }, [apiKeyQuery.data, licenseKeyQuery.data, setValue]);
+
   const onSubmitApiKey: SubmitHandler<z.infer<typeof formSchema>> = async (
     data
   ) => {
@@ -84,13 +88,6 @@ export default function AccountView() {
   const onSubmitLicenseKey = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     await generateLicenseKey.mutateAsync();
-  };
-
-  const createDiagram = async () => {
-    const newDiagram = await generateDiagram.mutateAsync({
-      diagramDescription,
-      licenseKey: licenseKeyRef.current?.value || "",
-    });
   };
 
   function copyLicenseKey(e: React.MouseEvent<HTMLButtonElement>) {
@@ -119,10 +116,8 @@ export default function AccountView() {
   }, [copySuccess]);
 
   const apiKeyFieldIsLoading = saveApiKey.isLoading || apiKeyQuery.isLoading;
-
-  const apiKeyDefaultValue = apiKeyQuery.data
-    ? `${apiKeyMask}${apiKeyQuery.data}`
-    : "";
+  const licenseKeyFieldIsLoading =
+    generateLicenseKey.isLoading || licenseKeyQuery.isLoading;
 
   return (
     <Form {...form}>
@@ -136,9 +131,9 @@ export default function AccountView() {
                 <div className="flex w-full flex-grow flex-row">
                   <Input
                     disabled={apiKeyFieldIsLoading}
+                    onFocus={(e) => e.target.select()}
                     placeholder={"Enter key"}
                     {...field}
-                    defaultValue={apiKeyDefaultValue}
                     className="mr-1 flex flex-grow"
                   />
                   <Button
@@ -175,23 +170,16 @@ export default function AccountView() {
               <FormControl>
                 <div className="flex w-full flex-col space-y-2">
                   <Input
-                    disabled={
-                      generateLicenseKey.isLoading || licenseKeyQuery.isLoading
-                    }
+                    disabled={licenseKeyFieldIsLoading}
                     placeholder={"Generate a key"}
+                    onFocus={(e) => e.target.select()}
                     {...field}
                     ref={licenseKeyRef}
-                    defaultValue={
-                      licenseKeyQuery.data || (field.value as string)
-                    }
                     className="mr-1 flex-1"
                   />
                   <div className="flex w-full flex-grow flex-row">
                     <Button
-                      disabled={
-                        generateLicenseKey.isLoading ||
-                        licenseKeyQuery.isLoading
-                      }
+                      disabled={licenseKeyFieldIsLoading}
                       variant="outline"
                       type="button"
                       className="mr-1 flex flex-1 flex-grow"
@@ -203,7 +191,7 @@ export default function AccountView() {
 
                     <Button
                       variant="outline"
-                      disabled={generateLicenseKey.isLoading}
+                      disabled={licenseKeyFieldIsLoading}
                       className="flex flex-1"
                       onClick={(e) => void onSubmitLicenseKey(e)}
                     >
@@ -222,26 +210,6 @@ export default function AccountView() {
             </FormItem>
           )}
         />
-        <div className="flex w-full flex-col space-y-2">
-          <Input
-            disabled={generateDiagram.isLoading}
-            placeholder={"Describe a diagram"}
-            onChange={(e) => setDiagramDescription(e.target.value)}
-            className="mr-1 flex-1"
-          />
-          <div className="flex w-full flex-grow flex-row">
-            <Button
-              disabled={generateDiagram.isLoading}
-              variant="outline"
-              type="button"
-              className="mr-1 flex flex-1 flex-grow"
-              onClick={() => void createDiagram()}
-            >
-              <Copy className="mr-3 h-4 w-4" />
-              Generate Diagram
-            </Button>
-          </div>
-        </div>
       </form>
     </Form>
   );
