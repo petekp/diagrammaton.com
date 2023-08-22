@@ -24,6 +24,8 @@
     "@trpc/next": "^10.26.0",
     "@trpc/react-query": "^10.26.0",
     "@trpc/server": "^10.26.0",
+    "@upstash/ratelimit": "^0.4.3",
+    "@upstash/redis": "^1.22.0",
     "class-variance-authority": "^0.6.1",
     "clsx": "^2.0.0",
     "lucide-react": "^0.260.0",

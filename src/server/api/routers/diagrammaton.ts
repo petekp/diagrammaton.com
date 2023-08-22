@@ -1,6 +1,8 @@
 import { TRPCError, type inferProcedureInput } from "@trpc/server";
 import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
 import { Configuration, OpenAIApi } from "openai";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { type LogArgument } from "rollbar";
 import { z } from "zod";
 
@@ -13,7 +15,20 @@ import {
 } from "~/plugins/diagrammaton/lib";
 import { logError, logInfo } from "~/utils/log";
 
+import { env } from "~/env.mjs";
+
 export const runtime = "edge";
+
+const redis = new Redis({
+  url: env.UPSTASH_REDIS_URL,
+  token: env.UPSTASH_REDIS_TOKEN,
+});
+
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(1, "5 s"),
+  analytics: true,
+});
 
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
@@ -27,6 +42,19 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
+      const identifier = input.licenseKey;
+      const { success } = await ratelimit.limit(identifier);
+
+      if (!success) {
+        handleError({
+          message: "Rate limit exceeded",
+          code: "TOO_MANY_REQUESTS",
+          data: {
+            input,
+          },
+        });
+      }
+
       if (!input.diagramDescription) {
         handleError({
           message: "No diagram description provided",
@@ -112,33 +140,29 @@ export const diagrammatonRouter = createTRPCRouter({
           openai,
         });
 
-        const parsedGrammar = parser.parse(combinedSteps!);
+        let parsedGrammar;
 
-        handleError({
-          message: "Unable to parse response",
-          code: "INTERNAL_SERVER_ERROR",
-          data: { user: stringifiedUser, input, steps: combinedSteps },
-        });
+        try {
+          parsedGrammar = parser.parse(combinedSteps!);
+        } catch (err) {
+          handleError({
+            message: "Unable to parse response",
+            code: "INTERNAL_SERVER_ERROR",
+            data: { err, user: stringifiedUser, input, steps: combinedSteps },
+          });
+        }
 
-        const filteredGrammar: unknown[] = (parsedGrammar as unknown[]).filter(
+        const diagramData: unknown[] = (parsedGrammar as unknown[]).filter(
           Boolean
         );
 
         logInfo("Diagram generated", {
           user: stringifiedUser,
           input,
-          output: "stubbed output",
+          output: diagramData,
         });
 
-        if (!filteredGrammar.length) {
-          handleError({
-            message: "Unable to parse response",
-            code: "INTERNAL_SERVER_ERROR",
-            data: { user: stringifiedUser, input, steps: combinedSteps },
-          });
-        }
-
-        return filteredGrammar;
+        return diagramData;
       } catch (err) {
         handleError({
           message: "Fatal error",
