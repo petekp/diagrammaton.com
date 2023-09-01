@@ -1,7 +1,7 @@
 import { type SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
-import { Copy, RefreshCcw } from "lucide-react";
+import { Copy, LockIcon, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 
@@ -92,11 +92,14 @@ export default function AccountView() {
 
   function copyLicenseKey(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
+
     if (!licenseKeyRef.current?.value) {
       return;
     }
 
     if (!navigator.clipboard) return;
+
+    licenseKeyRef.current?.focus();
 
     navigator.clipboard
       .writeText(licenseKeyRef?.current?.value || "")
@@ -126,7 +129,9 @@ export default function AccountView() {
           name="openaiApiKey"
           render={({ field, fieldState: { error } }) => (
             <FormItem className="flex flex-col items-start">
-              <FormLabel>Your OpenAI API key</FormLabel>
+              <FormLabel className="flex flex-row gap-3">
+                Your OpenAI API key <LockIcon size="16" />
+              </FormLabel>
               <FormControl>
                 <div className="flex w-full flex-grow flex-row">
                   <Input
@@ -180,7 +185,7 @@ export default function AccountView() {
                   <div className="flex w-full flex-grow flex-row">
                     <Button
                       disabled={licenseKeyFieldIsLoading}
-                      variant="outline"
+                      variant="secondary"
                       type="button"
                       className="mr-1 flex flex-1 flex-grow"
                       onClick={(e) => copyLicenseKey(e)}
@@ -190,13 +195,13 @@ export default function AccountView() {
                     </Button>
 
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       disabled={licenseKeyFieldIsLoading}
                       className="flex flex-1"
                       onClick={(e) => void onSubmitLicenseKey(e)}
                     >
                       <RefreshCcw
-                        className={`mr-2 h-4 w-4 stroke-slate-500 ${
+                        className={`mr-2 h-4 w-4 ${
                           generateLicenseKey.isLoading ? "animate-spin" : ""
                         }`}
                       />
