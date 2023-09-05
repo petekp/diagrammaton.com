@@ -14,6 +14,9 @@ module.exports = {
         "2xl": "1400px",
       },
     },
+    letterSpacing: {
+      widest: "0.3rem",
+    },
     extend: {
       colors: {
         border: "hsla(var(--border))",

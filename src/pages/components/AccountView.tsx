@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Copy, LockIcon, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { api } from "~/utils/api";
 import { Input } from "@/components/ui/input";
@@ -124,35 +125,38 @@ export default function AccountView() {
 
   return (
     <Form {...form}>
-      <form className="space-y-6">
+      <form className="space-y-6 px-5">
         <Controller
           name="openaiApiKey"
           render={({ field, fieldState: { error } }) => (
             <FormItem className="flex flex-col items-start">
-              <FormLabel className="flex flex-row gap-3">
-                Your OpenAI API key <LockIcon size="16" />
+              <FormLabel className="flex select-none flex-row gap-2">
+                Your OpenAI API key <LockIcon size="14" />
               </FormLabel>
               <FormControl>
-                <div className="flex w-full flex-grow flex-row">
-                  <Input
-                    disabled={apiKeyFieldIsLoading}
-                    onFocus={(e) => e.target.select()}
-                    placeholder={"Enter key"}
-                    {...field}
-                    className="mr-1 flex flex-grow"
-                  />
-                  <Button
-                    type="button"
-                    disabled={apiKeyFieldIsLoading}
-                    variant="secondary"
-                    onClick={(e) => void form.handleSubmit(onSubmitApiKey)(e)}
-                  >
-                    Save
-                  </Button>
-                </div>
+                <>
+                  <div className="flex w-full flex-grow flex-row">
+                    <Input
+                      disabled={apiKeyFieldIsLoading}
+                      onFocus={(e) => e.target.select()}
+                      placeholder={"Enter key"}
+                      {...field}
+                      className="mr-1 flex flex-grow"
+                    />
+                    <Button
+                      type="button"
+                      disabled={apiKeyFieldIsLoading}
+                      variant="secondary"
+                      className="select-none"
+                      onClick={(e) => void form.handleSubmit(onSubmitApiKey)(e)}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </>
               </FormControl>
               {error && (
-                <p className="error-message text-sm text-red-700">
+                <p className="error-message select-none text-xs text-orange-700 dark:text-orange-400">
                   {error.message}
                 </p>
               )}
@@ -160,54 +164,58 @@ export default function AccountView() {
             </FormItem>
           )}
         />
+
         <Controller
           name="licenseKey"
           render={({ field, fieldState: { error } }) => (
             <FormItem className="flex flex-col items-start">
               <FormLabel className="flex flex-1 justify-between">
-                <span>Your license key</span>
-                {copySuccess && (
-                  <span className="success-message ml-2 animate-bounce text-green-600 ">
-                    {copySuccess}
-                  </span>
-                )}
+                <span className="select-none">FigJam license key</span>
+                <AnimatePresence>
+                  {copySuccess && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="success-message ml-2 animate-bounce text-green-400 "
+                    >
+                      {copySuccess}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </FormLabel>
               <FormControl>
-                <div className="flex w-full flex-col space-y-2">
+                <div className="flex w-full flex-row">
                   <Input
                     disabled={licenseKeyFieldIsLoading}
                     placeholder={"Generate a key"}
                     onFocus={(e) => e.target.select()}
                     {...field}
                     ref={licenseKeyRef}
-                    className="mr-1 flex-1"
+                    className="mr-1 w-full flex-1"
                   />
-                  <div className="flex w-full flex-grow flex-row">
-                    <Button
-                      disabled={licenseKeyFieldIsLoading}
-                      variant="secondary"
-                      type="button"
-                      className="mr-1 flex flex-1 flex-grow"
-                      onClick={(e) => copyLicenseKey(e)}
-                    >
-                      <Copy className="mr-3 h-4 w-4" />
-                      Copy to clipboard
-                    </Button>
+                  <Button
+                    disabled={licenseKeyFieldIsLoading}
+                    variant="secondary"
+                    type="button"
+                    className="flex-0 mr-1 flex"
+                    onClick={(e) => copyLicenseKey(e)}
+                  >
+                    <Copy className="h-4" />
+                  </Button>
 
-                    <Button
-                      variant="secondary"
-                      disabled={licenseKeyFieldIsLoading}
-                      className="flex flex-1"
-                      onClick={(e) => void onSubmitLicenseKey(e)}
-                    >
-                      <RefreshCcw
-                        className={`mr-2 h-4 w-4 ${
-                          generateLicenseKey.isLoading ? "animate-spin" : ""
-                        }`}
-                      />
-                      Regenerate
-                    </Button>
-                  </div>
+                  <Button
+                    variant="secondary"
+                    disabled={licenseKeyFieldIsLoading}
+                    className="flex-0 flex"
+                    onClick={(e) => void onSubmitLicenseKey(e)}
+                  >
+                    <RefreshCcw
+                      className={`h-4 ${
+                        generateLicenseKey.isLoading ? "animate-spin" : ""
+                      }`}
+                    />
+                  </Button>
                 </div>
               </FormControl>
               {error && <p className="error-message">{error.message}</p>}
