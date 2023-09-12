@@ -54,23 +54,14 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: env.GOOGLE_ID,
       clientSecret: env.GOOGLE_SECRET,
-      profile(profile: {
-        sub: string;
-        name: string;
-        email: string;
-        picture: string;
-      }): {
+      profile(profile: { sub: string; email: string }): {
         id: string;
-        name: string;
         email: string;
-        image: string;
         isBetaUser: boolean;
       } {
         return {
           id: profile.sub,
-          name: profile.name,
           email: profile.email,
-          image: profile.picture,
           isBetaUser: true,
         };
       },
