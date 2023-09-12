@@ -14,6 +14,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import Logo from "./components/Logo";
 import { motion, type AnimationProps } from "framer-motion";
 import { ArrowRightIcon } from "lucide-react";
+import Link from "next/link";
 
 const approxDiamondAnimLength = 2;
 
@@ -25,8 +26,8 @@ export default function Home({
     initial: { opacity: 0, scale: sessionData ? 1 : 0.85, rotate: 45 },
     animate: {
       opacity: 1,
-      scale: sessionData ? 1.4 : 1,
-      rotate: 45,
+      scale: 1,
+      rotate: sessionData ? 0 : 45,
       transition: { type: "spring", damping: 20, stiffness: 20 },
     },
   };
@@ -34,7 +35,7 @@ export default function Home({
   return (
     <>
       <Head>
-        <title>Diagrammaton - AI Powered diagrams for FigJam</title>
+        <title>Diagrammaton • AI powered diagrams for FigJam</title>
         <meta
           name="description"
           content="Diagrammaton - AI Powered diagrams for FigJam"
@@ -42,12 +43,12 @@ export default function Home({
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <div className="absolute flex h-full max-h-full w-full max-w-full items-center justify-center overflow-hidden align-middle opacity-50">
+        <div className="absolute flex h-full max-h-full w-full max-w-full items-center justify-center opacity-50">
           <Logo />
         </div>
         <motion.div
           {...diamondAnimation}
-          className="absolute z-auto h-[450px] w-[450px]  origin-center rotate-45 rounded-sm border border-accent-foreground backdrop-blur-md"
+          className="fixed h-[450px] w-[450px]  origin-center rotate-45 rounded-sm border border-accent-foreground backdrop-blur-md"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
@@ -69,9 +70,9 @@ function SignIn({
       scale: 1,
       transition: {
         type: "spring",
-        damping: 10,
-        stiffness: 30,
-        delay: approxDiamondAnimLength,
+        damping: 20,
+        stiffness: 40,
+        delay: 1.3,
       },
     },
   };
@@ -103,14 +104,15 @@ function SignIn({
   };
 
   const descriptionAnimation: AnimationProps = {
-    initial: { opacity: 0 },
+    initial: { opacity: 0, y: -15 },
     animate: {
       opacity: 1,
+      y: 0,
       transition: {
         delay: approxDiamondAnimLength,
         type: "spring",
         damping: 20,
-        stiffness: 150,
+        stiffness: 100,
       },
     },
   };
@@ -120,107 +122,92 @@ function SignIn({
     animate: {
       opacity: 1,
       transition: {
-        delay: approxDiamondAnimLength,
+        delay: approxDiamondAnimLength + 0.3,
         type: "spring",
-        damping: 20,
+        damping: 40,
         stiffness: 150,
       },
     },
   };
 
   return (
-    <div className="container relative mx-auto w-full flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-1 lg:px-0">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 ">
-        <div className="mx-auto flex flex-col space-y-2 text-center ">
-          <div className="relative w-[450px] space-y-5 pb-0 pt-7">
-            <div className="space-y-10">
-              <div className="select-none space-y-5">
-                <motion.div
-                  {...logoAnimation}
-                  className="flex items-center justify-center align-middle"
+    <div className="relative flex flex-col items-center justify-center pt-7">
+      <div className="flex flex-col items-center justify-center space-y-10">
+        <div className="select-none space-y-5">
+          <motion.div
+            {...logoAnimation}
+            className="flex items-center justify-center align-middle"
+          >
+            <Logo2 />
+          </motion.div>
+          <div className="space-y-1">
+            <motion.div
+              {...staggerAnimation}
+              className="text text-xl font-bold uppercase tracking-widest text-primary"
+            >
+              {"Diagrammaton".split("").map((char, index) => (
+                <motion.span
+                  key={index}
+                  {...letterAnimation}
+                  variants={staggerAnimation.variants}
                 >
-                  <Logo2 />
-                </motion.div>
-                <div className="space-y-1">
-                  <motion.div
-                    {...staggerAnimation}
-                    className="text text-lg font-extrabold uppercase tracking-widest text-primary"
-                  >
-                    {"Diagrammaton".split("").map((char, index) => (
-                      <motion.span
-                        key={index}
-                        {...letterAnimation}
-                        variants={staggerAnimation.variants}
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
-                  </motion.div>
+                  {char}
+                </motion.span>
+              ))}
+            </motion.div>
 
-                  <motion.div
-                    {...descriptionAnimation}
-                    className="text text-muted"
-                  >
-                    AI powered diagrams for FigJam
-                  </motion.div>
-                </div>
-                {sessionData && <AccountView />}
-              </div>
-
-              <div className="flex flex-1 flex-col">
-                {!sessionData && (
-                  <motion.div {...signInAnimation} className="space-y-2">
-                    {Object.values(providers).map((provider) => (
-                      <div key={provider.name}>
-                        <Button
-                          variant="default"
-                          className="gap-2"
-                          onClick={() => void signIn(provider.id)}
-                        >
-                          {`Sign in with ${provider.name}`}
-                          <ArrowRightIcon size={16} />
-                        </Button>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-                {sessionData && (
-                  <motion.div
-                    {...signInAnimation}
-                    className="flex flex-1 select-none flex-row items-center justify-between gap-2 py-1 "
-                  >
-                    <Button
-                      size="sm"
-                      variant="link"
-                      onClick={() => void signOut()}
-                    >
-                      Sign out
-                    </Button>
-                  </motion.div>
-                )}
-              </div>
-            </div>
+            <motion.div {...descriptionAnimation} className="text text-muted">
+              AI powered diagrams for FigJam
+            </motion.div>
           </div>
+          {sessionData && <AccountView />}
         </div>
 
-        {/* <p className="px-8 text-center text-sm text-muted-foreground">
-            By clicking continue, you agree to our{" "}
-            <Link
-              href="/terms"
-              className="underline underline-offset-4 hover:text-primary"
+        <div className="flex flex-1 flex-col">
+          {!sessionData && (
+            <motion.div {...signInAnimation} className="space-y-2">
+              {Object.values(providers).map((provider) => (
+                <div key={provider.name}>
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    onClick={() => void signIn(provider.id)}
+                  >
+                    {`Sign in with ${provider.name}`}
+                    <ArrowRightIcon size={16} />
+                  </Button>
+                </div>
+              ))}
+            </motion.div>
+          )}
+          {sessionData && (
+            <motion.div
+              {...signInAnimation}
+              className="flex flex-1 select-none flex-row items-center justify-between gap-2 py-1 "
             >
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/privacy"
-              className="underline underline-offset-4 hover:text-primary"
-            >
-              Privacy Policy
-            </Link>
-
-          </p> */}
+              <Button size="sm" variant="link" onClick={() => void signOut()}>
+                Sign out
+              </Button>
+            </motion.div>
+          )}
+        </div>
       </div>
+
+      <p className="px-8 text-center text-sm text-muted-foreground">
+        <Link
+          href="/terms"
+          className="underline underline-offset-4 hover:text-primary"
+        >
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link
+          href="/privacy"
+          className="underline underline-offset-4 hover:text-primary"
+        >
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 }

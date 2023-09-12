@@ -12,6 +12,7 @@ export default function Logo() {
 
   return (
     <motion.svg
+      className="fixed"
       width="894"
       height="894"
       viewBox="0 0 894 894"
