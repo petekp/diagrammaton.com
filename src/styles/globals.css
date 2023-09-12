@@ -13,7 +13,7 @@
     --background: 0 0% 100%;
     --foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 10% 50.1%;
+    --muted: 250 10% 50.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --popover: 0 0% 100%;
@@ -25,8 +25,8 @@
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 250 50% 15%;
+    --primary-foreground: 250 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -37,7 +37,7 @@
     --destructive: 0 100% 50%;
     --destructive-foreground: 210 40% 98%;
 
-    --ring: 215 20.2% 65.1%;
+    --ring: 250 90.2% 50.1%;
 
     --radius: 0.5rem;
   }
