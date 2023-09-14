@@ -125,7 +125,7 @@ export default function AccountView() {
 
   return (
     <Form {...form}>
-      <form className="space-y-6 px-5 py-5">
+      <form className="space-y-6 px-5">
         <Controller
           name="openaiApiKey"
           render={({ field, fieldState: { error } }) => (

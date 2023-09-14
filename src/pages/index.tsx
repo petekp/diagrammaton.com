@@ -9,12 +9,13 @@ import { getProviders, signIn, signOut, getSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
 import AccountView from "./components/AccountView";
-import Logo2 from "./components/Logo2";
+import Logo3 from "./components/Logo3";
 import ThemeToggle from "./components/ThemeToggle";
 import Logo from "./components/Logo";
 import { motion, type AnimationProps } from "framer-motion";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, DoorOpenIcon } from "lucide-react";
 import Link from "next/link";
+import StarArrows from "./components/StarArrows";
 
 const approxDiamondAnimLength = 2;
 
@@ -23,12 +24,16 @@ export default function Home({
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const diamondAnimation: AnimationProps = {
-    initial: { opacity: 0, scale: sessionData ? 1 : 0.85, rotate: 45 },
+    initial: {
+      opacity: sessionData ? 1 : 0,
+      scale: sessionData ? 1.2 : 0.85,
+      rotate: 45,
+    },
     animate: {
       opacity: 1,
-      scale: 1,
-      rotate: sessionData ? 0 : 45,
-      transition: { type: "spring", damping: 20, stiffness: 20 },
+      scale: sessionData ? 1.2 : 1,
+      rotate: 45,
+      transition: { type: "spring", damping: 20, stiffness: 50 },
     },
   };
 
@@ -43,17 +48,52 @@ export default function Home({
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <div className="absolute flex h-full max-h-full w-full max-w-full items-center justify-center opacity-50">
-          <Logo />
+        <div className="absolute flex h-screen w-screen   items-center justify-center opacity-50">
+          <StarArrows />
         </div>
         <motion.div
           {...diamondAnimation}
-          className="fixed h-[450px] w-[450px]  origin-center rotate-45 rounded-sm border border-accent-foreground backdrop-blur-md"
+          className="fixed h-[450px]  w-[450px] origin-center rotate-45 rounded-sm border-8 border-gray-200 bg-white/80"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
       <div className="absolute right-0 top-0 p-4">
         <ThemeToggle />
+      </div>
+      <div className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 px-5 py-4 sm:flex-row sm:justify-between sm:space-y-0 sm:bg-transparent">
+        <div className="flex items-center">
+          {sessionData ? (
+            <>
+              <p className="text-center text-sm text-muted-foreground">
+                {`Signed in as ${sessionData?.user?.email}`}
+              </p>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-5 gap-2"
+                onClick={() => void signOut()}
+              >
+                Sign Out
+                <DoorOpenIcon size={16} />
+              </Button>
+            </>
+          ) : null}
+        </div>
+        <div className="flex justify-center gap-1 text-sm text-muted-foreground">
+          <Link
+            href="/terms"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            Terms of Service
+          </Link>{" "}
+          <span>•</span>
+          <Link
+            href="/privacy"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </>
   );
@@ -64,7 +104,7 @@ function SignIn({
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const logoAnimation: AnimationProps = {
-    initial: { opacity: 0, scale: 0.9 },
+    initial: { opacity: sessionData ? 1 : 0, scale: sessionData ? 1 : 0.9 },
     animate: {
       opacity: 1,
       scale: 1,
@@ -78,7 +118,7 @@ function SignIn({
   };
 
   const letterAnimation: AnimationProps = {
-    initial: { opacity: 0 },
+    initial: { opacity: sessionData ? 1 : 0 },
     animate: {
       opacity: 1,
       transition: { type: "spring", damping: 40, stiffness: 150 },
@@ -89,7 +129,7 @@ function SignIn({
     initial: "hidden",
     animate: "visible",
     variants: {
-      hidden: { opacity: 0 },
+      hidden: { opacity: sessionData ? 1 : 0 },
       visible: {
         opacity: 1,
         transition: {
@@ -104,7 +144,7 @@ function SignIn({
   };
 
   const descriptionAnimation: AnimationProps = {
-    initial: { opacity: 0, y: -15 },
+    initial: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -15 },
     animate: {
       opacity: 1,
       y: 0,
@@ -122,7 +162,7 @@ function SignIn({
     animate: {
       opacity: 1,
       transition: {
-        delay: approxDiamondAnimLength + 0.3,
+        delay: sessionData ? 0 : approxDiamondAnimLength + 0.3,
         type: "spring",
         damping: 40,
         stiffness: 150,
@@ -138,12 +178,12 @@ function SignIn({
             {...logoAnimation}
             className="flex items-center justify-center align-middle"
           >
-            <Logo2 />
+            <Logo3 />
           </motion.div>
-          <div className="space-y-1">
+          <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className="text text-xl font-bold uppercase tracking-widest text-primary"
+              className="text text-2xl font-extrabold uppercase tracking-widest text-primary"
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span
@@ -156,58 +196,36 @@ function SignIn({
               ))}
             </motion.div>
 
-            <motion.div {...descriptionAnimation} className="text text-muted">
-              AI powered diagrams for FigJam
-            </motion.div>
-          </div>
-          {sessionData && <AccountView />}
-        </div>
-
-        <div className="flex flex-1 flex-col">
-          {!sessionData && (
-            <motion.div {...signInAnimation} className="space-y-2">
-              {Object.values(providers).map((provider) => (
-                <div key={provider.name}>
-                  <Button
-                    variant="default"
-                    className="gap-2"
-                    onClick={() => void signIn(provider.id)}
-                  >
-                    {`Sign in with ${provider.name}`}
-                    <ArrowRightIcon size={16} />
-                  </Button>
-                </div>
-              ))}
-            </motion.div>
-          )}
-          {sessionData && (
-            <motion.div
-              {...signInAnimation}
-              className="flex flex-1 select-none flex-row items-center justify-between gap-2 py-1 "
+            <motion.p
+              {...descriptionAnimation}
+              className="text tracking-wide text-muted"
             >
-              <Button size="sm" variant="link" onClick={() => void signOut()}>
-                Sign out
-              </Button>
-            </motion.div>
-          )}
+              AI powered diagrams for FigJam
+            </motion.p>
+          </div>
         </div>
+        {sessionData && (
+          <motion.div {...signInAnimation}>
+            <AccountView />
+          </motion.div>
+        )}
+        {!sessionData && (
+          <motion.div {...signInAnimation}>
+            {Object.values(providers).map((provider) => (
+              <motion.div layout key={provider.name}>
+                <Button
+                  variant="default"
+                  className="gap-2"
+                  onClick={() => void signIn(provider.id)}
+                >
+                  {`Sign in with ${provider.name}`}
+                  <ArrowRightIcon size={16} />
+                </Button>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
-
-      <p className="px-8 text-center text-sm text-muted-foreground">
-        <Link
-          href="/terms"
-          className="underline underline-offset-4 hover:text-primary"
-        >
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link
-          href="/privacy"
-          className="underline underline-offset-4 hover:text-primary"
-        >
-          Privacy Policy
-        </Link>
-      </p>
     </div>
   );
 }
@@ -230,6 +248,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     props: {
       providers: providers ?? [],
       sessionData: sessionData ?? null,
+      // sessionData: true,
     },
   };
 }

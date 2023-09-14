@@ -87,3 +87,17 @@
     --radius: 0.5rem;
   }
 }
+
+.star-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.arrow, .arrow-line {
+  fill: black;
+  stroke: black;
+  stroke-width: 1;
+}

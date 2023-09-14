@@ -35,13 +35,34 @@
         "label": "localtunnel:pete-dev",
         "type": "shell",
         "command": "lt",
-        "args": ["-p", "3000", "-s", "pete-dev"],
+        "args": [
+          "-p",
+          "3000",
+          "-s",
+          "pete-dev"
+        ],
         "problemMatcher": [],
         "isBackground": true,
         "runOptions": {
           "runOn": "folderOpen"
         },
-        "dependsOn": ["dev"],
+        "dependsOn": [
+          "dev"
+        ],
+        "presentation": {
+          "panel": "dedicated",
+          "clear": true
+        }
+      },
+      {
+        "label": "npm run dev",
+        "type": "npm",
+        "script": "dev",
+        "problemMatcher": [],
+        "isBackground": true,
+        "runOptions": {
+          "runOn": "folderOpen"
+        },
         "presentation": {
           "panel": "dedicated",
           "clear": true
