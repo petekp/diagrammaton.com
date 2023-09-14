@@ -19,7 +19,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --border: 214.3 31.8% 91.4%;
+    --border: 250 10% 80%;
     --input: 214.3 31.8% 91.4%;
 
     --card: 0 0% 100%;
@@ -57,7 +57,7 @@
     --popover: 250 70% 10%;
     --popover-foreground: 250 70% 90%;
 
-    --border: 216 34% 17%;
+    --border: 220 50% 20%;
     --input: 216 34% 17%;
 
     /* card bg */
@@ -94,10 +94,4 @@
   left: 0;
   width: 100%;
   height: 100%;
-}
-
-.arrow, .arrow-line {
-  fill: black;
-  stroke: black;
-  stroke-width: 1;
 }

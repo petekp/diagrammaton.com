@@ -1,5 +1,7 @@
 import Head from "next/head";
-
+import { motion, type AnimationProps } from "framer-motion";
+import { ArrowRightIcon, DoorOpenIcon } from "lucide-react";
+import Link from "next/link";
 import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
@@ -7,14 +9,9 @@ import type {
 import { getProviders, signIn, signOut, getSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
-
 import AccountView from "./components/AccountView";
 import Logo3 from "./components/Logo3";
 import ThemeToggle from "./components/ThemeToggle";
-import Logo from "./components/Logo";
-import { motion, type AnimationProps } from "framer-motion";
-import { ArrowRightIcon, DoorOpenIcon } from "lucide-react";
-import Link from "next/link";
 import StarArrows from "./components/StarArrows";
 
 const approxDiamondAnimLength = 2;
@@ -26,14 +23,26 @@ export default function Home({
   const diamondAnimation: AnimationProps = {
     initial: {
       opacity: sessionData ? 1 : 0,
-      scale: sessionData ? 1.2 : 0.85,
+      scale: sessionData ? 1.2 : 0.5,
       rotate: 45,
     },
     animate: {
       opacity: 1,
       scale: sessionData ? 1.2 : 1,
       rotate: 45,
-      transition: { type: "spring", damping: 20, stiffness: 50 },
+      transition: { type: "spring", damping: 50, stiffness: 80 },
+    },
+  };
+
+  const arrowsAnimation: AnimationProps = {
+    initial: {
+      opacity: sessionData ? 1 : 0,
+      scale: sessionData ? 1.2 : 0.85,
+    },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring", damping: 50, stiffness: 80 },
     },
   };
 
@@ -48,24 +57,27 @@ export default function Home({
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-background">
-        <div className="absolute flex h-screen w-screen   items-center justify-center opacity-50">
-          <StarArrows />
-        </div>
+        <motion.div
+          {...arrowsAnimation}
+          className="absolute flex h-screen w-screen   items-center justify-center"
+        >
+          <StarArrows className="fill-border stroke-border" />
+        </motion.div>
         <motion.div
           {...diamondAnimation}
-          className="fixed h-[450px]  w-[450px] origin-center rotate-45 rounded-sm border-8 border-gray-200 bg-white/80"
+          className="fixed h-[450px]  w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-white/80"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
       <div className="absolute right-0 top-0 p-4">
         <ThemeToggle />
       </div>
-      <div className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 px-5 py-4 sm:flex-row sm:justify-between sm:space-y-0 sm:bg-transparent">
+      <div className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 px-5 py-4 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0 sm:bg-transparent">
         <div className="flex items-center">
           {sessionData ? (
             <>
               <p className="text-center text-sm text-muted-foreground">
-                {`Signed in as ${sessionData?.user?.email}`}
+                {`Signed in as ${sessionData?.user.email || ''}`}
               </p>
               <Button
                 variant="link"
@@ -171,7 +183,7 @@ function SignIn({
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center pt-7">
+    <div className="relative flex flex-col items-center justify-center pt-3">
       <div className="flex flex-col items-center justify-center space-y-10">
         <div className="select-none space-y-5">
           <motion.div
