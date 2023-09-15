@@ -56,16 +56,16 @@ export default function Home({
         />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <main className="flex min-h-[100dvh] min-w-[100dvw] flex-col items-center justify-center bg-background">
         <motion.div
           {...arrowsAnimation}
-          className="absolute flex h-screen w-screen   items-center justify-center"
+          className="fixed flex min-h-[100dvh] min-w-[100dvw] items-center justify-center"
         >
           <StarArrows className="fill-border stroke-border" />
         </motion.div>
         <motion.div
           {...diamondAnimation}
-          className="fixed h-[450px]  w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-white/80"
+          className="fixed h-[450px] w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-gradient-radial from-white to-white/70"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
@@ -77,7 +77,7 @@ export default function Home({
           {sessionData ? (
             <>
               <p className="text-center text-sm text-muted-foreground">
-                {`Signed in as ${sessionData?.user.email || ''}`}
+                {`Signed in as ${sessionData?.user.email || ""}`}
               </p>
               <Button
                 variant="link"
@@ -91,14 +91,16 @@ export default function Home({
             </>
           ) : null}
         </div>
-        <div className="flex justify-center gap-1 text-sm text-muted-foreground">
+        <div className="flex justify-center gap-1 text-xs text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Pete Petrash</p>
+          <span className="text-muted-foreground/40">•</span>
           <Link
             href="/terms"
             className="underline underline-offset-4 hover:text-primary"
           >
             Terms of Service
           </Link>{" "}
-          <span>•</span>
+          <span className="text-muted-foreground/40">•</span>
           <Link
             href="/privacy"
             className="underline underline-offset-4 hover:text-primary"
