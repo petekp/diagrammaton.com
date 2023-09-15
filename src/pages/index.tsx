@@ -46,6 +46,17 @@ export default function Home({
     },
   };
 
+  const footerAnimation: AnimationProps = {
+    initial: {
+      opacity: sessionData ? 1 : 0,
+    },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring", damping: 50, stiffness: 80 },
+    },
+  };
+
   return (
     <>
       <Head>
@@ -72,7 +83,10 @@ export default function Home({
       <div className="absolute right-0 top-0 p-4">
         <ThemeToggle />
       </div>
-      <div className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 px-5 py-4 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0 sm:bg-transparent">
+      <motion.div
+        {...footerAnimation}
+        className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-white to-transparent px-5 py-5 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0"
+      >
         <div className="flex items-center">
           {sessionData ? (
             <>
@@ -108,7 +122,7 @@ export default function Home({
             Privacy Policy
           </Link>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
@@ -118,10 +132,15 @@ function SignIn({
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const logoAnimation: AnimationProps = {
-    initial: { opacity: sessionData ? 1 : 0, scale: sessionData ? 1 : 0.9 },
+    initial: {
+      opacity: sessionData ? 1 : 0,
+      scale: sessionData ? 1 : 0.9,
+      y: sessionData ? 0 : 10,
+    },
     animate: {
       opacity: 1,
       scale: 1,
+      y: 0,
       transition: {
         type: "spring",
         damping: 20,
@@ -172,9 +191,10 @@ function SignIn({
   };
 
   const signInAnimation: AnimationProps = {
-    initial: { opacity: 0 },
+    initial: { opacity: 0, y: -10 },
     animate: {
       opacity: 1,
+      y: 0,
       transition: {
         delay: sessionData ? 0 : approxDiamondAnimLength + 0.3,
         type: "spring",
@@ -187,7 +207,7 @@ function SignIn({
   return (
     <div className="relative flex flex-col items-center justify-center pt-3">
       <div className="flex flex-col items-center justify-center space-y-10">
-        <div className="select-none space-y-5">
+        <div className="select-none space-y-8">
           <motion.div
             {...logoAnimation}
             className="flex items-center justify-center align-middle"
