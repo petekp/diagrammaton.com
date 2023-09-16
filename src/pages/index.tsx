@@ -13,6 +13,8 @@ import AccountView from "./components/AccountView";
 import Logo3 from "./components/Logo3";
 import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
 const approxDiamondAnimLength = 2;
 
@@ -76,7 +78,7 @@ export default function Home({
         </motion.div>
         <motion.div
           {...diamondAnimation}
-          className="fixed h-[450px] w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-gradient-radial from-white to-white/70"
+          className="fixed h-[450px] w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-gradient-radial from-background to-background/70"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
@@ -85,7 +87,7 @@ export default function Home({
       </div>
       <motion.div
         {...footerAnimation}
-        className="absolute bottom-0 right-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-white to-transparent px-5 py-5 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0"
+        className="fixed bottom-0 right-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-5 py-5 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0"
       >
         <div className="flex items-center">
           {sessionData ? (
@@ -131,6 +133,30 @@ function SignIn({
   providers,
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  const [eyeHeight, setEyeHeight] = useState(300);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    const toggleEyeHeight = () => {
+      setEyeHeight(0); // Close the eye
+      void new Promise((resolve) => setTimeout(resolve, 200)).then(() => {
+        setEyeHeight(300); // Open the eye after 200ms
+      });
+    };
+
+    // Call once immediately
+    toggleEyeHeight();
+
+    const intervalId = setInterval(() => {
+      void toggleEyeHeight();
+    }, Math.random() * 2000 + 3000); // Random interval between 1-3 seconds
+
+    // Clean up interval on unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
   const logoAnimation: AnimationProps = {
     initial: {
       opacity: sessionData ? 1 : 0,
@@ -191,7 +217,7 @@ function SignIn({
   };
 
   const signInAnimation: AnimationProps = {
-    initial: { opacity: 0, y: -10 },
+    initial: { opacity: 0.01, y: -10 },
     animate: {
       opacity: 1,
       y: 0,
@@ -212,12 +238,12 @@ function SignIn({
             {...logoAnimation}
             className="flex items-center justify-center align-middle"
           >
-            <Logo3 />
+            <Logo3 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
           </motion.div>
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className="text text-2xl font-extrabold uppercase tracking-widest text-primary"
+              className="text text-2xl font-extrabold uppercase tracking-widest text-foreground"
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span

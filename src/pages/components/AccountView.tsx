@@ -174,7 +174,7 @@ export default function AccountView() {
                 <AnimatePresence>
                   {copySuccess && (
                     <motion.span
-                      initial={{ opacity: 0 }}
+                      initial={{ opacity: 0.01 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       className="success-message ml-2 animate-bounce text-green-400 "

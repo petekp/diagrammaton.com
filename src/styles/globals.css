@@ -11,7 +11,7 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 47.4% 11.2%;
+    --foreground: 250 50% 15%;
 
     --muted: 250 10% 50.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
@@ -44,7 +44,7 @@
 
   .dark {
     --background: 250 60% 4%;
-    --foreground: 220 50% 3%;
+    --foreground: 250 70% 96%;
 
     --muted: 250 50% 97%;
     --muted-foreground: 250 40% 65%;
@@ -57,7 +57,7 @@
     --popover: 250 70% 10%;
     --popover-foreground: 250 70% 90%;
 
-    --border: 220 50% 20%;
+    --border: 250 50% 30%;
     --input: 216 34% 17%;
 
     /* card bg */
@@ -66,7 +66,7 @@
     /* card text color */
     --card-foreground: 250 70% 95%;
 
-    --primary: 250 70% 20%;
+    --primary: 250 70% 40%;
     --primary-foreground: 250 70% 100%;
 
     --input: 256 50% 50%;
