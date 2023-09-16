@@ -67,7 +67,8 @@ export default function Home({
           name="description"
           content="Diagrammaton - AI Powered diagrams for FigJam"
         />
-        <link rel="icon" href="/diagrammaton.svg" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/diagrammaton.svg" type="image/svg+xml" />
       </Head>
       <main className="flex min-h-[100dvh] min-w-[100dvw] flex-col items-center justify-center bg-background">
         <motion.div
@@ -82,14 +83,14 @@ export default function Home({
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
-      <div className="absolute right-0 top-0 p-4">
+      <div className="fixed right-0 top-0 p-4 sm:right-5">
         <ThemeToggle />
       </div>
       <motion.div
         {...footerAnimation}
-        className="fixed bottom-0 right-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-5 py-5 sm:right-10 sm:flex-row sm:justify-between sm:space-y-0"
+        className="fixed bottom-0 left-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-10 py-5 sm:flex-row sm:justify-between sm:space-y-0"
       >
-        <div className="flex items-center">
+        <div className="flex items-center justify-center">
           {sessionData ? (
             <>
               <p className="text-center text-sm text-muted-foreground">
