@@ -12,14 +12,14 @@ export default function Logo2() {
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M699.125 372.31L372.681 45.8658L46.2369 372.31L372.681 698.754L699.125 372.31ZM372.681 0L0.371062 372.31L372.681 744.62L744.991 372.31L372.681 0Z"
         fill="#0194FF"
       />
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
+        fillRule="evenodd"
+        clipRule="evenodd"
         d="M603.601 603.222L603.601 142.019L142.399 142.019L142.399 603.222L603.601 603.222ZM636 109.62L110 109.62L110 635.62L636 635.62L636 109.62Z"
         fill="#FF036D"
       />
@@ -62,7 +62,7 @@ export default function Logo2() {
         r="53.5"
         transform="matrix(0 1 1 0 305 304.62)"
         stroke="#00D655"
-        stroke-width="30"
+        strokeWidth="30"
       />
       <circle cx="392" cy="346" r="32" fill="#00D655" />
     </motion.svg>

@@ -35,8 +35,6 @@ const StarArrows = ({ className = "" }: { className?: string }) => {
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  console.log(dimensions);
-
   return (
     <svg ref={svgRef} width="100%" height="100%">
       <line

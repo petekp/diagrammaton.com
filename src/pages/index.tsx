@@ -39,7 +39,7 @@ export default function Home({
   const arrowsAnimation: AnimationProps = {
     initial: {
       opacity: sessionData ? 1 : 0,
-      scale: sessionData ? 1.2 : 0.85,
+      scale: sessionData ? 1 : 0.85,
     },
     animate: {
       opacity: 1,
@@ -111,14 +111,16 @@ export default function Home({
           <p>&copy; {new Date().getFullYear()} Pete Petrash</p>
           <span className="text-muted-foreground/40">•</span>
           <Link
-            href="/terms"
+            href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
+            target="_blank"
             className="underline underline-offset-4 hover:text-primary"
           >
             Terms of Service
           </Link>{" "}
           <span className="text-muted-foreground/40">•</span>
           <Link
-            href="/privacy"
+            href="https://petekp.notion.site/Privacy-Policy-d000f7c9676a4979a394070439bb0f99?pvs=4"
+            target="_blank"
             className="underline underline-offset-4 hover:text-primary"
           >
             Privacy Policy

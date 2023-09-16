@@ -193,7 +193,6 @@ async function getChatCompletion({
   let chatCompletion;
 
   try {
-    console.log("calling GPT endpoint");
     chatCompletion = await openai.createChatCompletion({
       model: data.input.model || GPTModels["gpt3"],
       functions,
@@ -203,7 +202,6 @@ async function getChatCompletion({
       max_tokens: 3000,
     });
   } catch (err: unknown) {
-    console.log({ err });
     if ((err as { status: number }).status === 401) {
       handleError({
         message: "Invalid OpenAI API key",
