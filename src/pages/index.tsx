@@ -220,7 +220,7 @@ function SignIn({
   };
 
   const signInAnimation: AnimationProps = {
-    initial: { opacity: 0.01, y: -10 },
+    initial: { opacity: 0.001, y: -10 },
     animate: {
       opacity: 1,
       y: 0,
@@ -273,7 +273,7 @@ function SignIn({
           </motion.div>
         )}
         {!sessionData && (
-          <motion.div {...signInAnimation}>
+          <motion.div {...signInAnimation} className="flex flex-col gap-2">
             {Object.values(providers).map((provider) => (
               <motion.div layout key={provider.name}>
                 <Button
@@ -286,6 +286,14 @@ function SignIn({
                 </Button>
               </motion.div>
             ))}
+            <Button variant="outline" asChild>
+              <Link
+                href="https://petekp.notion.site/Diagrammaton-cfa9b2043fcc4bbba008c4925ff9ccb4?pvs=4"
+                target="_blank"
+              >
+                Learn more
+              </Link>
+            </Button>
           </motion.div>
         )}
       </div>
