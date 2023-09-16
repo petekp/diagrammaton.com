@@ -67,7 +67,7 @@ export default function Home({
           name="description"
           content="Diagrammaton - AI Powered diagrams for FigJam"
         />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/diagrammaton.svg" />
       </Head>
       <main className="flex min-h-[100dvh] min-w-[100dvw] flex-col items-center justify-center bg-background">
         <motion.div
