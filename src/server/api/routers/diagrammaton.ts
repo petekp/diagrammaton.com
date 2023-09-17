@@ -77,13 +77,15 @@ export const diagrammatonRouter = createTRPCRouter({
       });
 
       try {
-        const licenseKeys = await ctx.prisma.licenseKey.findMany({
-          where: {
-            key: input.licenseKey,
-          },
-        });
+        let licenseKeys;
 
-        if (!licenseKeys.length) {
+        try {
+          licenseKeys = await ctx.prisma.licenseKey.findMany({
+            where: {
+              key: input.licenseKey,
+            },
+          });
+        } catch {
           handleError({
             message: "Invalid license key",
             code: "UNAUTHORIZED",
@@ -93,6 +95,7 @@ export const diagrammatonRouter = createTRPCRouter({
 
         const user = await ctx.prisma.user.findUnique({
           where: {
+            // @ts-ignore
             id: licenseKeys[0]?.userId,
           },
           select: {
@@ -269,5 +272,6 @@ function handleError({
   data?: LogArgument;
 }) {
   logError(message, data);
+  console.error(message);
   throw new TRPCError({ message, code });
 }
