@@ -7,6 +7,7 @@ import type {
   InferGetServerSidePropsType,
 } from "next";
 import { getProviders, signIn, signOut, getSession } from "next-auth/react";
+import lexend from "../fonts";
 
 import { Button } from "@/components/ui/button";
 import AccountView from "./components/AccountView";
@@ -246,7 +247,7 @@ function SignIn({
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className="text text-2xl font-extrabold uppercase tracking-widest text-foreground"
+              className={`text text-2xl uppercase tracking-widest text-foreground ${lexend.className}`}
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span
