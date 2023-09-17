@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { motion, type AnimationProps } from "framer-motion";
-import { ArrowRightIcon, DoorOpenIcon } from "lucide-react";
+import { ArrowRightIcon, DoorClosedIcon, DoorOpenIcon } from "lucide-react";
 import Link from "next/link";
 import type {
   GetServerSidePropsContext,
@@ -23,15 +23,17 @@ export default function Home({
   providers,
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  const [signOutHovered, setSignOutHovered] = useState(false);
+
   const diamondAnimation: AnimationProps = {
     initial: {
-      opacity: sessionData ? 1 : 0,
-      scale: sessionData ? 1.2 : 0.5,
+      opacity: 0,
+      scale: sessionData ? 1.4 : 0.5,
       rotate: 45,
     },
     animate: {
       opacity: 1,
-      scale: sessionData ? 1.2 : 1,
+      scale: sessionData ? 1.4 : 1,
       rotate: 45,
       transition: { type: "spring", damping: 50, stiffness: 80 },
     },
@@ -39,7 +41,7 @@ export default function Home({
 
   const arrowsAnimation: AnimationProps = {
     initial: {
-      opacity: sessionData ? 1 : 0,
+      opacity: 0,
       scale: sessionData ? 1 : 0.85,
     },
     animate: {
@@ -80,7 +82,7 @@ export default function Home({
         </motion.div>
         <motion.div
           {...diamondAnimation}
-          className="fixed h-[450px] w-[450px] origin-center rotate-45 rounded-sm border-2 border-border bg-gradient-radial from-background to-background/70"
+          className="rounded-xs fixed h-[450px] w-[450px] origin-center rotate-45 border border-border bg-gradient-radial from-background to-background/70"
         ></motion.div>
         <SignIn providers={providers} sessionData={sessionData} />
       </main>
@@ -89,22 +91,28 @@ export default function Home({
       </div>
       <motion.div
         {...footerAnimation}
-        className="fixed bottom-0 left-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-10 py-5 sm:flex-row sm:justify-between sm:space-y-0"
+        className="fixed bottom-0 left-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-0 py-5 sm:flex-row sm:justify-between sm:space-y-0 sm:px-10"
       >
         <div className="flex items-center justify-center">
           {sessionData ? (
             <>
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-xs text-muted-foreground">
                 {`Signed in as ${sessionData?.user.email || ""}`}
               </p>
               <Button
                 variant="link"
                 size="sm"
-                className="h-5 gap-2"
+                className="h-5 gap-1 text-xs"
+                onPointerOver={() => setSignOutHovered(true)}
+                onPointerLeave={() => setSignOutHovered(false)}
                 onClick={() => void signOut()}
               >
+                {signOutHovered ? (
+                  <DoorOpenIcon size={16} />
+                ) : (
+                  <DoorClosedIcon size={16} />
+                )}
                 Sign Out
-                <DoorOpenIcon size={16} />
               </Button>
             </>
           ) : null}
@@ -138,6 +146,7 @@ function SignIn({
   sessionData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [eyeHeight, setEyeHeight] = useState(300);
+
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
@@ -221,7 +230,7 @@ function SignIn({
   };
 
   const signInAnimation: AnimationProps = {
-    initial: { opacity: 0.001, y: -10 },
+    initial: { opacity: 0.001, y: sessionData ? 0 : -10 },
     animate: {
       opacity: 1,
       y: 0,
@@ -247,7 +256,7 @@ function SignIn({
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className={`text text-2xl uppercase tracking-widest text-foreground ${lexend.className}`}
+              className={`text text-3xl uppercase tracking-widest text-foreground ${lexend.className}`}
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span

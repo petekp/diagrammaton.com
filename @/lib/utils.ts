@@ -7,6 +7,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateLicenseKey() {
-  const licenseKey = nanoid();
+  const licenseKey = nanoid(18);
   return licenseKey;
 }

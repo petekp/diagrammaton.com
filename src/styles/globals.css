@@ -3,85 +3,84 @@
 @tailwind utilities;
 
 ::selection {
-  background: hsl(205 100% 30%);
-  color: var(--background);
+  background: hsla(var(--accent-foreground));
+  color: white;
 }
-
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 250 50% 15%;
+    --foreground: 266 50% 15%;
 
-    --muted: 250 10% 50.1%;
+    --muted: 266 10% 50.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --border: 250 10% 80%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 266 10% 80%;
+    --input: 266 32% 86%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 250 50% 15%;
-    --primary-foreground: 250 40% 98%;
+    --primary: 266 50% 15%;
+    --primary-foreground: 266 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --secondary-hover: 250 70% 46%;
+    --secondary: 266 40% 93%;
+    --secondary-foreground: 266.2 47.4% 40.2%;
+    --secondary-hover: 266 70% 95%;
 
-    --accent: 250 40% 96.1%;
-    --accent-foreground: 250 93% 49%;
+    --accent: 266 40% 96.1%;
+    --accent-foreground: 266 100% 50%;
 
     --destructive: 0 100% 50%;
     --destructive-foreground: 210 40% 98%;
 
-    --ring: 250 90.2% 50.1%;
+    --ring: 266 90.2% 50.1%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 250 60% 4%;
-    --foreground: 250 70% 96%;
+    --background: 266 60% 4%;
+    --foreground: 266 70% 96%;
 
-    --muted: 250 50% 97%;
-    --muted-foreground: 250 40% 65%;
+    --muted: 266 50% 97%;
+    --muted-foreground: 266 40% 65%;
 
-    --accent: 250 70% 13%;
-    --accent-foreground: 250 40% 96.1%;
+    --accent: 266 70% 13%;
+    --accent-foreground: 266 40% 50.1%;
 
-    --popover: 250 70% 10%;
-    --popover-foreground: 250 70% 90%;
+    --popover: 266 70% 10%;
+    --popover-foreground: 266 70% 90%;
 
-    --border: 250 50% 30%;
+    --border: 266 50% 30%;
     --input: 216 34% 17%;
 
     /* card bg */
-    --card: 250 60% 8%/0.4;
+    --card: 266 60% 8%/0.4;
 
     /* card text color */
-    --card-foreground: 250 70% 95%;
+    --card-foreground: 266 70% 95%;
 
-    --primary: 250 70% 40%;
-    --primary-foreground: 250 70% 100%;
+    --primary: 266 70% 70%;
+    --primary-foreground: 266 70% 100%;
 
     --input: 256 50% 50%;
 
     /* secondary btn bg */
-    --secondary: 256 50% 50%;
+    --secondary: 256 50% 40%;
+    --secondary-hover: 256 50% 50%;
     /* secondary btn text color */
-    --secondary-foreground: 210 40% 98%;
+    --secondary-foreground: 256 40% 98%;
 
-    --secondary-hover: 250 70% 46%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --ring: 250 80% 70%;
-    --ring-shadow: 250 70% 20%;
+    --ring: 266 80% 70%;
+    --ring-shadow: 266 70% 20%;
 
     --radius: 0.5rem;
   }

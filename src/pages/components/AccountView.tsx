@@ -125,7 +125,10 @@ export default function AccountView() {
 
   return (
     <Form {...form}>
-      <form className="space-y-6 px-5">
+      <form
+        className="min-w-[310px] max-w-[350px] space-y-6"
+        spellCheck="false"
+      >
         <Controller
           name="openaiApiKey"
           render={({ field, fieldState: { error } }) => (
@@ -137,6 +140,7 @@ export default function AccountView() {
                 <>
                   <div className="flex w-full flex-grow flex-row">
                     <Input
+                      tabIndex={0}
                       disabled={apiKeyFieldIsLoading}
                       onFocus={(e) => e.target.select()}
                       placeholder={"Enter key"}
