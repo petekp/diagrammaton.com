@@ -50,10 +50,8 @@
     --muted: 250 50% 97%;
     --muted-foreground: 250 40% 65%;
 
-    --accent: 250 70% 20%/0.5;
-
-    /* card outline */
-    --accent-foreground: 335 100% 51%;
+    --accent: 250 70% 13%;
+    --accent-foreground: 250 40% 96.1%;
 
     --popover: 250 70% 10%;
     --popover-foreground: 250 70% 90%;

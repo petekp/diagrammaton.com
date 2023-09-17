@@ -115,7 +115,7 @@ export default function Home({
           <Link
             href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
             target="_blank"
-            className="underline underline-offset-4 hover:text-primary"
+            className="underline underline-offset-4 hover:text-foreground"
           >
             Terms of Service
           </Link>{" "}
@@ -123,7 +123,7 @@ export default function Home({
           <Link
             href="https://petekp.notion.site/Privacy-Policy-d000f7c9676a4979a394070439bb0f99?pvs=4"
             target="_blank"
-            className="underline underline-offset-4 hover:text-primary"
+            className="underline underline-offset-4 hover:text-foreground"
           >
             Privacy Policy
           </Link>
