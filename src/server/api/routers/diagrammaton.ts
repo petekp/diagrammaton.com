@@ -1,9 +1,7 @@
-import { TRPCError, type inferProcedureInput } from "@trpc/server";
-import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
+import { type inferProcedureInput } from "@trpc/server";
 import { Configuration, OpenAIApi } from "openai";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { type LogArgument } from "rollbar";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -14,8 +12,18 @@ import {
   createMessages,
 } from "~/plugins/diagrammaton/lib";
 import { logError, logInfo } from "~/utils/log";
-
 import { env } from "~/env.mjs";
+import handleError, {
+  ApiKeyNotFoundForUser,
+  GPTFailedToCallFunction,
+  InvalidApiKey,
+  InvalidLicenseKey,
+  NoDescriptionProvided,
+  OpenAiError,
+  RateLimitExceededError,
+  UnableToParseGPTResponse,
+  UserNotFound,
+} from "./errors";
 
 export const runtime = "edge";
 
@@ -46,23 +54,11 @@ export const diagrammatonRouter = createTRPCRouter({
       const { success } = await ratelimit.limit(identifier);
 
       if (!success) {
-        handleError({
-          message: "Rate limit exceeded",
-          code: "TOO_MANY_REQUESTS",
-          data: {
-            input,
-          },
-        });
+        throw new RateLimitExceededError();
       }
 
       if (!input.diagramDescription) {
-        handleError({
-          message: "No diagram description provided",
-          code: "BAD_REQUEST",
-          data: {
-            input,
-          },
-        });
+        throw new NoDescriptionProvided({ input });
       }
       const timeout = setTimeout(() => {
         logError("Function is about to timeout", {
@@ -77,25 +73,18 @@ export const diagrammatonRouter = createTRPCRouter({
       });
 
       try {
-        let licenseKeys;
+        const licenseKeys = await ctx.prisma.licenseKey.findMany({
+          where: {
+            key: input.licenseKey,
+          },
+        });
 
-        try {
-          licenseKeys = await ctx.prisma.licenseKey.findMany({
-            where: {
-              key: input.licenseKey,
-            },
-          });
-        } catch {
-          handleError({
-            message: "Invalid license key",
-            code: "UNAUTHORIZED",
-            data: { input },
-          });
+        if (!licenseKeys.length) {
+          throw new InvalidLicenseKey({ input });
         }
 
         const user = await ctx.prisma.user.findUnique({
           where: {
-            // @ts-ignore
             id: licenseKeys[0]?.userId,
           },
           select: {
@@ -106,27 +95,22 @@ export const diagrammatonRouter = createTRPCRouter({
         });
 
         if (!user) {
-          handleError({
-            message: "Error fetching user",
-            code: "INTERNAL_SERVER_ERROR",
-            data: { input },
-          });
+          throw new UserNotFound({ input });
         }
 
-        const stringifiedUser = JSON.stringify({ ...user, openaiApiKey: "" });
+        const stringifiedUser = JSON.stringify({
+          ...user,
+          openaiApiKey: "redacted",
+        });
 
         const apiKey = user?.openaiApiKey;
 
         if (!apiKey) {
-          handleError({
-            message: "No Open AI API key registered",
-            code: "BAD_REQUEST",
-            data: { user: stringifiedUser, input },
-          });
+          throw new ApiKeyNotFoundForUser({ user: stringifiedUser, input });
         }
 
         if (typeof apiKey !== "string") {
-          throw new Error("API key must be a string");
+          throw new InvalidApiKey();
         }
 
         const configuration = new Configuration({
@@ -148,10 +132,10 @@ export const diagrammatonRouter = createTRPCRouter({
         try {
           parsedGrammar = parser.parse(combinedSteps!);
         } catch (err) {
-          handleError({
-            message: "Unable to parse response",
-            code: "INTERNAL_SERVER_ERROR",
-            data: { err, user: stringifiedUser, input, steps: combinedSteps },
+          throw new UnableToParseGPTResponse({
+            user: stringifiedUser,
+            input,
+            steps: combinedSteps,
           });
         }
 
@@ -167,14 +151,7 @@ export const diagrammatonRouter = createTRPCRouter({
 
         return diagramData;
       } catch (err) {
-        handleError({
-          message: "Fatal error",
-          code: "INTERNAL_SERVER_ERROR",
-          data: {
-            message: (err as TRPCError).message,
-            stack: (err as TRPCError).stack,
-          },
-        });
+        handleError(err as Error);
       } finally {
         clearTimeout(timeout);
       }
@@ -206,18 +183,10 @@ async function getChatCompletion({
     });
   } catch (err: unknown) {
     if ((err as { status: number }).status === 401) {
-      handleError({
-        message: "Invalid OpenAI API key",
-        code: "UNAUTHORIZED",
-        data,
-      });
+      throw new InvalidApiKey({ data });
     }
 
-    handleError({
-      message: "OpenAI API error",
-      code: "INTERNAL_SERVER_ERROR",
-      data,
-    });
+    throw new OpenAiError({ data });
   }
 
   const choices = chatCompletion?.data.choices;
@@ -230,21 +199,8 @@ async function getChatCompletion({
       message: string;
     };
 
-    if (message) {
-      handleError({
-        message: "GPT failed to use function_call",
-        code: "UNPROCESSABLE_CONTENT",
-        data,
-      });
-    }
-
-    if (!steps?.length) {
-      handleError({
-        message: "Unable to parse",
-        code: "INTERNAL_SERVER_ERROR",
-        data,
-      });
-    }
+    if (message) throw new GPTFailedToCallFunction(data);
+    if (!steps?.length) throw new UnableToParseGPTResponse(data);
 
     const combinedSteps = steps.reduce(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -254,24 +210,6 @@ async function getChatCompletion({
 
     return combinedSteps;
   } else {
-    handleError({
-      message: "Error generating diagram",
-      code: "INTERNAL_SERVER_ERROR",
-      data,
-    });
+    throw new UnableToParseGPTResponse(data);
   }
-}
-
-function handleError({
-  message,
-  code,
-  data,
-}: {
-  message: string;
-  code: TRPC_ERROR_CODE_KEY;
-  data?: LogArgument;
-}) {
-  logError(message, data);
-  console.error(message);
-  throw new TRPCError({ message, code });
 }
