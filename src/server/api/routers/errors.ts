@@ -1,9 +1,15 @@
 import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
 import { logError } from "../../../utils/log";
 import { TRPCError } from "@trpc/server";
+import { LogArgument } from "rollbar";
 
-export default function handleError(err: Error) {
-  logError(err.message, err);
+export default function handleError(
+  err: {
+    logArgs?: LogArgument;
+  } & Error
+) {
+  logError(err.message, err.logArgs);
+
   if (err instanceof DiagrammatonError) {
     throw new TRPCError({ message: err.message, code: err.code });
   }
@@ -15,20 +21,20 @@ export default function handleError(err: Error) {
 }
 
 class DiagrammatonError extends Error {
-  data: unknown;
+  logArgs: unknown;
   code: TRPC_ERROR_CODE_KEY;
   constructor({
     message,
     code,
-    data,
+    logArgs,
   }: {
     message: string;
     code: TRPC_ERROR_CODE_KEY;
-    data?: unknown;
+    logArgs?: unknown;
   }) {
     super(message);
     this.code = code;
-    this.data = data;
+    this.logArgs = logArgs;
   }
 }
 
@@ -37,7 +43,7 @@ export class RateLimitExceededError extends DiagrammatonError {
     super({
       message: "Rate limit exceeded",
       code: "TOO_MANY_REQUESTS",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -46,7 +52,7 @@ export class NoDescriptionProvided extends DiagrammatonError {
     super({
       message: "No diagram description provided",
       code: "BAD_REQUEST",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -55,7 +61,7 @@ export class InvalidLicenseKey extends DiagrammatonError {
     super({
       message: "Invalid license key",
       code: "UNAUTHORIZED",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -64,7 +70,7 @@ export class InvalidApiKey extends DiagrammatonError {
     super({
       message: "API key must be a string",
       code: "BAD_REQUEST",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -73,7 +79,7 @@ export class OpenAiError extends DiagrammatonError {
     super({
       message: "OpenAI API error",
       code: "INTERNAL_SERVER_ERROR",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -82,7 +88,7 @@ export class UserNotFound extends DiagrammatonError {
     super({
       message: "User not found",
       code: "UNAUTHORIZED",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -91,7 +97,7 @@ export class ApiKeyNotFoundForUser extends DiagrammatonError {
     super({
       message: "No OpenAI API key registered",
       code: "BAD_REQUEST",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -100,7 +106,7 @@ export class GPTFailedToCallFunction extends DiagrammatonError {
     super({
       message: "GPT failed to utilize function_call",
       code: "INTERNAL_SERVER_ERROR",
-      data,
+      logArgs: data,
     });
   }
 }
@@ -109,7 +115,7 @@ export class UnableToParseGPTResponse extends DiagrammatonError {
     super({
       message: "Unable to parse GPT response",
       code: "INTERNAL_SERVER_ERROR",
-      data,
+      logArgs: data,
     });
   }
 }

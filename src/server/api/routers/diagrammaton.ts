@@ -56,10 +56,10 @@ export const diagrammatonRouter = createTRPCRouter({
         // 55 seconds
       }, 55000);
 
-      logInfo("Generate diagram", {
-        diagramDescription: input.diagramDescription,
-        model: input.model,
-      });
+      // logInfo("Generate diagram", {
+      //   diagramDescription: input.diagramDescription,
+      //   model: input.model,
+      // });
 
       try {
         const licenseKeys = await ctx.prisma.licenseKey.findMany({
@@ -102,18 +102,10 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new InvalidApiKey();
         }
 
-        const configuration = new Configuration({
-          apiKey,
-        });
-
-        const openai = new OpenAIApi(configuration);
-
         const combinedSteps = await getChatCompletion({
-          data: {
-            user: stringifiedUser,
-            input,
-          },
-          openai,
+          apiKey,
+          input,
+          user: stringifiedUser,
         });
 
         let parsedGrammar;
@@ -133,7 +125,6 @@ export const diagrammatonRouter = createTRPCRouter({
         );
 
         logInfo("Diagram generated", {
-          user: stringifiedUser,
           input,
           output: diagramData,
         });
@@ -150,32 +141,37 @@ export const diagrammatonRouter = createTRPCRouter({
 });
 
 async function getChatCompletion({
-  data,
-  openai,
+  user,
+  input,
+  apiKey,
 }: {
-  data: {
-    user: string;
-    input: inferProcedureInput<typeof diagrammatonRouter.generate>;
-  };
-  openai: OpenAIApi;
+  user: string;
+  input: inferProcedureInput<typeof diagrammatonRouter.generate>;
+  apiKey: string;
 }) {
+  const configuration = new Configuration({
+    apiKey,
+  });
+
+  const openai = new OpenAIApi(configuration);
+
   let chatCompletion;
 
   try {
     chatCompletion = await openai.createChatCompletion({
-      model: data.input.model || GPTModels["gpt3"],
+      model: input.model || GPTModels["gpt3"],
       functions,
       function_call: "auto",
       temperature: 0,
-      messages: createMessages(data.input.diagramDescription),
+      messages: createMessages(input.diagramDescription),
       max_tokens: 3000,
     });
   } catch (err: unknown) {
     if ((err as { status: number }).status === 401) {
-      throw new InvalidApiKey({ data });
+      throw new InvalidApiKey({ user });
     }
 
-    throw new OpenAiError({ data });
+    throw new OpenAiError({ err, input });
   }
 
   const choices = chatCompletion?.data.choices;
@@ -188,8 +184,12 @@ async function getChatCompletion({
       message: string;
     };
 
-    if (message) throw new GPTFailedToCallFunction(data);
-    if (!steps?.length) throw new UnableToParseGPTResponse(data);
+    logInfo("GPT Response: ", { steps, message });
+
+    if (message) {
+      throw new GPTFailedToCallFunction({ input, message });
+    }
+    if (!steps?.length) throw new UnableToParseGPTResponse({ input, choices });
 
     const combinedSteps = steps.reduce(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -199,6 +199,6 @@ async function getChatCompletion({
 
     return combinedSteps;
   } else {
-    throw new UnableToParseGPTResponse(data);
+    throw new UnableToParseGPTResponse({ input });
   }
 }
