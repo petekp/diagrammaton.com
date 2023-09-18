@@ -1,7 +1,6 @@
 import { type inferProcedureInput } from "@trpc/server";
 import { Configuration, OpenAIApi } from "openai";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -12,7 +11,7 @@ import {
   createMessages,
 } from "~/plugins/diagrammaton/lib";
 import { logError, logInfo } from "~/utils/log";
-import { env } from "~/env.mjs";
+
 import handleError, {
   ApiKeyNotFoundForUser,
   GPTFailedToCallFunction,
@@ -24,19 +23,9 @@ import handleError, {
   UnableToParseGPTResponse,
   UserNotFound,
 } from "./errors";
+import rateLimiter from "./rateLimiter";
 
 export const runtime = "edge";
-
-const redis = new Redis({
-  url: env.UPSTASH_REDIS_URL,
-  token: env.UPSTASH_REDIS_TOKEN,
-});
-
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(1, "5 s"),
-  analytics: true,
-});
 
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
@@ -51,7 +40,7 @@ export const diagrammatonRouter = createTRPCRouter({
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
-      const { success } = await ratelimit.limit(identifier);
+      const { success } = await rateLimiter.limit(identifier);
 
       if (!success) {
         throw new RateLimitExceededError();
