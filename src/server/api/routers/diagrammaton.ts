@@ -119,7 +119,7 @@ export const diagrammatonRouter = createTRPCRouter({
         let parsedGrammar;
 
         try {
-          parsedGrammar = parser.parse(combinedSteps!);
+          parsedGrammar = parser.parse(combinedSteps);
         } catch (err) {
           throw new UnableToParseGPTResponse({
             user: stringifiedUser,

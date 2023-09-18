@@ -1,5 +1,4 @@
 import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
-import { LogArgument } from "rollbar";
 import { logError } from "../../../utils/log";
 import { TRPCError } from "@trpc/server";
 
@@ -16,7 +15,7 @@ export default function handleError(err: Error) {
 }
 
 class DiagrammatonError extends Error {
-  data: any;
+  data: unknown;
   code: TRPC_ERROR_CODE_KEY;
   constructor({
     message,
@@ -25,7 +24,7 @@ class DiagrammatonError extends Error {
   }: {
     message: string;
     code: TRPC_ERROR_CODE_KEY;
-    data?: any;
+    data?: unknown;
   }) {
     super(message);
     this.code = code;
@@ -34,7 +33,7 @@ class DiagrammatonError extends Error {
 }
 
 export class RateLimitExceededError extends DiagrammatonError {
-  constructor(data?: any) {
+  constructor(data?: unknown) {
     super({
       message: "Rate limit exceeded",
       code: "TOO_MANY_REQUESTS",
