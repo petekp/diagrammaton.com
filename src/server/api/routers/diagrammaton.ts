@@ -49,17 +49,13 @@ export const diagrammatonRouter = createTRPCRouter({
       if (!input.diagramDescription) {
         throw new NoDescriptionProvided({ input });
       }
+
       const timeout = setTimeout(() => {
         logError("Function is about to timeout", {
           input,
         });
         // 55 seconds
       }, 55000);
-
-      // logInfo("Generate diagram", {
-      //   diagramDescription: input.diagramDescription,
-      //   model: input.model,
-      // });
 
       try {
         const licenseKeys = await ctx.prisma.licenseKey.findMany({
@@ -102,7 +98,7 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new InvalidApiKey();
         }
 
-        const combinedSteps = await getChatCompletion({
+        const combinedSteps = await getCompletion({
           apiKey,
           input,
           user: stringifiedUser,
@@ -124,7 +120,7 @@ export const diagrammatonRouter = createTRPCRouter({
           Boolean
         );
 
-        logInfo("Diagram generated", {
+        logInfo("Successfully generated diagram", {
           input,
           output: diagramData,
         });
@@ -140,7 +136,7 @@ export const diagrammatonRouter = createTRPCRouter({
     }),
 });
 
-async function getChatCompletion({
+async function getCompletion({
   user,
   input,
   apiKey,
@@ -164,11 +160,12 @@ async function getChatCompletion({
       function_call: "auto",
       temperature: 0,
       messages: createMessages(input.diagramDescription),
-      max_tokens: 3000,
+      max_tokens: 5000,
     });
   } catch (err: unknown) {
+    console.error(err);
     if ((err as { status: number }).status === 401) {
-      throw new InvalidApiKey({ user });
+      throw new InvalidApiKey({ err, user });
     }
 
     throw new OpenAiError({ err, input });
@@ -184,11 +181,10 @@ async function getChatCompletion({
       message: string;
     };
 
-    logInfo("GPT Response: ", { steps, message });
-
     if (message) {
       throw new GPTFailedToCallFunction({ input, message });
     }
+
     if (!steps?.length) throw new UnableToParseGPTResponse({ input, choices });
 
     const combinedSteps = steps.reduce(
