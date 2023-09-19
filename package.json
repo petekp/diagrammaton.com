@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "build": "node_modules/next/dist/bin/next build",
+    "dev": "node_modules/next/dist/bin/next dev",
     "postinstall": "prisma generate",
-    "lint": "next lint",
-    "start": "next start",
+    "lint": "node_modules/next/dist/bin/next lint",
+    "start": "node_modules/next/dist/bin/next start",
     "db:push": "dotenv -f .env.local run npx prisma db push",
     "db:migrate": "dotenv -f .env.local run npx prisma db migrate dev",
     "watch:diagrammaton:grammar": "nodemon --watch ./src/plugins/diagrammaton/grammar.peggy --exec 'npx peggy -o ./src/plugins/diagrammaton/grammar.js ./src/plugins/diagrammaton/grammar.peggy'"
