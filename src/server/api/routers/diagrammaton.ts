@@ -40,10 +40,16 @@ export const diagrammatonRouter = createTRPCRouter({
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
-      const { success } = await rateLimiter.limit(identifier);
 
-      if (!success) {
-        throw new RateLimitExceededError();
+      try {
+        const { success } = await rateLimiter.limit(identifier);
+        if (!success) {
+          throw new RateLimitExceededError();
+        }
+      } catch (err) {
+        // Handle the error here
+        logError("Rate limiter error", { err });
+        throw err;
       }
 
       if (!input.diagramDescription) {

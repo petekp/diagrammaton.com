@@ -256,7 +256,7 @@ function SignIn({
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className={`text text-3xl uppercase tracking-widest text-foreground ${lexend.className}`}
+              className={`text text-2xl sm:text-3xl uppercase tracking-widest text-foreground ${lexend.className}`}
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span

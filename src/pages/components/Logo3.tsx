@@ -2,10 +2,8 @@ import {
   animate,
   motion,
   useMotionValue,
-  useSpring,
-  useTransform,
 } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function Logo3({
   eyeHeight,

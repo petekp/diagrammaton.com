@@ -25,6 +25,7 @@
     --card-foreground: 222.2 47.4% 11.2%;
 
     --primary: 266 50% 15%;
+    --primary-hover: 266 50% 25%;
     --primary-foreground: 266 40% 98%;
 
     --secondary: 266 40% 93%;
@@ -64,7 +65,8 @@
     /* card text color */
     --card-foreground: 266 70% 95%;
 
-    --primary: 266 70% 70%;
+    --primary: 266 70% 30%;
+    --primary-hover: 266 70% 40%;
     --primary-foreground: 266 70% 100%;
 
     --input: 256 50% 50%;
