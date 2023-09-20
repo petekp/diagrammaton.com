@@ -4,8 +4,6 @@ import {
   CreateChatCompletionResponseChoicesInner,
   OpenAIApi,
 } from "openai";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 
 import { env } from "~/env.mjs";
 
@@ -55,28 +53,6 @@ export const diagrammatonRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
-
-      const redis = new Redis({
-        url: env.UPSTASH_REDIS_URL,
-        token: env.UPSTASH_REDIS_TOKEN,
-      });
-
-      const rateLimiter = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(1, "5 s"),
-        analytics: true,
-      });
-
-      try {
-        const { success } = await rateLimiter.limit(identifier);
-        if (!success) {
-          throw new RateLimitExceededError();
-        }
-      } catch (err) {
-        // Handle the error here
-        logError("Rate limiter error", { err });
-        throw err;
-      }
 
       if (!input.diagramDescription) {
         throw new NoDescriptionProvided({ input });
