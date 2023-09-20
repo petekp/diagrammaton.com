@@ -1,5 +1,9 @@
 import { type inferProcedureInput } from "@trpc/server";
 import { Configuration, OpenAIApi } from "openai";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+import { env } from "~/env.mjs";
 
 import { z } from "zod";
 
@@ -23,7 +27,6 @@ import handleError, {
   UnableToParseGPTResponse,
   UserNotFound,
 } from "./errors";
-import rateLimiter from "./rateLimiter";
 
 export const runtime = "edge";
 
@@ -40,6 +43,18 @@ export const diagrammatonRouter = createTRPCRouter({
     .output(z.array(z.unknown()))
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
+
+      const redis = new Redis({
+        url: env.UPSTASH_REDIS_URL,
+        token: env.UPSTASH_REDIS_TOKEN,
+      });
+
+      const rateLimiter =  new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(1, "5 s"),
+        analytics: true,
+      });
+
 
       try {
         const { success } = await rateLimiter.limit(identifier);
