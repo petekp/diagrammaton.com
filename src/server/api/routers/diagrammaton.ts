@@ -40,7 +40,10 @@ export const diagrammatonRouter = createTRPCRouter({
         model: z.string().optional().default(GPTModels["gpt3"]),
       })
     )
-    .output(z.array(z.unknown()))
+    .output(z.object({
+    type: z.union([z.literal('message'), z.literal('steps')]),
+    data: z.unknown(),
+  }))
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
 
@@ -119,21 +122,25 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new InvalidApiKey();
         }
 
-        const combinedSteps = await getCompletion({
+        const result = await getCompletion({
           apiKey,
           input,
           user: stringifiedUser,
         });
 
+        if (result.type === "message") {
+          return { type: "message", data: result.data };
+        }
+
         let parsedGrammar;
 
         try {
-          parsedGrammar = parser.parse(combinedSteps);
+          parsedGrammar = parser.parse(result.data);
         } catch (err) {
           throw new UnableToParseGPTResponse({
             user: stringifiedUser,
             input,
-            steps: combinedSteps,
+            steps: result.data,
           });
         }
 
@@ -146,14 +153,14 @@ export const diagrammatonRouter = createTRPCRouter({
           output: diagramData,
         });
 
-        return diagramData;
+        return { type: "steps", data: diagramData };
       } catch (err) {
         handleError(err as Error);
       } finally {
         clearTimeout(timeout);
       }
 
-      return [];
+      return { type: "message", data: null };
     }),
 });
 
@@ -173,15 +180,6 @@ async function getCompletion({
   const openai = new OpenAIApi(configuration);
 
   let chatCompletion;
-
-  logInfo("Calling OpenAI API", {
-      model: input.model || GPTModels["gpt3"],
-      functions,
-      function_call: "auto",
-      temperature: 0,
-      messages: createMessages(input.diagramDescription),
-      max_tokens: 3000,
-    });
 
   try {
     chatCompletion = await openai.createChatCompletion({
@@ -204,9 +202,17 @@ async function getCompletion({
   const choices = chatCompletion?.data.choices;
 
   if (choices && choices.length > 0) {
-    if (!choices[0]?.message?.function_call?.arguments) {
-      throw new Error("Invalid response from OpenAI API");
+    const wantsToUseFunction = choices[0]?.finish_reason === "function_call";
+    console.log('Used function: ', wantsToUseFunction)
+    if (wantsToUseFunction) {
+      console.log("Called: ", choices[0]?.message?.function_call?.name);
     }
+
+    if (!choices[0]?.message?.function_call?.arguments) {
+      throw new GPTFailedToCallFunction({ input, choices });
+    }
+
+    console.log(JSON.parse(choices[0].message.function_call.arguments));
 
     const { steps, message } = JSON.parse(
       choices[0].message.function_call.arguments
@@ -216,10 +222,12 @@ async function getCompletion({
     };
 
     if (message) {
-      throw new GPTFailedToCallFunction({ input, message });
+      return { type: "message", data: message };
     }
 
-    if (!steps?.length) throw new UnableToParseGPTResponse({ input, choices });
+    // if (!steps?.length) throw new UnableToParseGPTResponse({ input, choices });
+
+    // console.log("Steps: ", steps)
 
     const combinedSteps = steps.reduce(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -227,7 +235,7 @@ async function getCompletion({
       ``
     );
 
-    return combinedSteps;
+    return { type: "steps", data: combinedSteps };
   } else {
     throw new UnableToParseGPTResponse({ input });
   }

@@ -7,16 +7,7 @@ export const GPTModels = {
 export const functions = [
   {
     name: "print_diagram",
-    description: `Prints valid Mermaid syntax that adheres to the following principles without fail:
-
-    - MUST BE VALID MERMAID SYNTAX ONLY that resembles the example responses provided
-    - Always OMIT the "graph {TD|LR|etc}" instruction, if one exists since we aren't able to parse these yet
-    - Every step in the diagram MUST have a user-facing label
-    - Free of erroneous characters that might not parse cleanly
-    - Make sure to use concise (but grammatically correct) NodeLink labels to ensure the diagram is neat and tidy
-    - When I provide a high level diagram description, you must infer additional details based on the most use cases related to the general flow being described
-    - CRITICAL: One of your primary goals is to surprise and vastly exceed the user's expectations in robustly thinking through and including edge cases and conditions that the user may forget, overlook, or have not even considered!
-    `,
+    description: `Prints valid Mermaid syntax`,
     parameters: {
       type: "object",
       properties: {
@@ -51,7 +42,9 @@ export const functions = [
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful AI assistant with deep knowledge and expertise in software UI and UX design that helps translate natural language descriptions of UI and UX flows into valid Mermaid diagram syntax. You must call print_diagram if you are able to successfully parse the user's natural language description into valid Mermaid syntax, otherwise you must call print_error.
+    content: `You are a helpful AI assistant with deep knowledge and expertise in translating natural language descriptions into valid Mermaid diagram syntax. The first step is to understand the domain the user's diagram is in, e.g. a user flow, a data flow, a state machine, etc. The second step is to parse the user's natural language description into valid Mermaid syntax. The third step is to print the diagram.
+    
+    You must call print_diagram if you are able to successfully parse the user's natural language description into valid Mermaid syntax, otherwise you must call print_error. Below are examples of user input and the expected response.
 
     [Example 1]
 
@@ -94,10 +87,16 @@ export const createMessages = (input: string) => [
     ConfirmAccount -- Not Confirmed --> SendConfirmationEmail[Send Confirmation Email]
     SendConfirmationEmail --> ConfirmAccount
     ConfirmAccount -- Confirmed --> End[End: Signup Complete]
-    `,
+
+    [Example 3]
+
+    User input: A diagram
+
+    print_error response: "Can you provide more detail?"
+  `,
   },
   {
     role: ChatCompletionRequestMessageRoleEnum.User,
-    content: input,
+    content: `Call the print_diagram function using the following input: ${input}. If you are unable to parse it, call the print_error function instead.`,
   },
 ];

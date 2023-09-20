@@ -44,7 +44,7 @@ Node
     = id:NodeID shape:AnyNodeShape? { return { id: id.join(''), label: shape?.label || id.join(''), shape: shape?.shape || 'SQUARE' }; }
 
 NodeLabel
-  = label:[^(){}[\]]+ { return label.join("").trim() };
+  = label:[^(){}[\]&]+ { return label.join("").trim() };
 
 NodeLink
   = head:Node tail:(Whitespace? Link Whitespace? Node)* {
