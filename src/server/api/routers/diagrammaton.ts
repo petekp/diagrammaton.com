@@ -1,5 +1,9 @@
 import { type inferProcedureInput } from "@trpc/server";
-import { Configuration, OpenAIApi } from "openai";
+import {
+  Configuration,
+  CreateChatCompletionResponseChoicesInner,
+  OpenAIApi,
+} from "openai";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -37,13 +41,18 @@ export const diagrammatonRouter = createTRPCRouter({
       z.object({
         licenseKey: z.string(),
         diagramDescription: z.string(),
-        model: z.string().optional().default(GPTModels["gpt3"]),
+        model: z
+          .union([z.literal("gpt3"), z.literal("gpt4")])
+          .optional()
+          .default("gpt3"),
       })
     )
-    .output(z.object({
-    type: z.union([z.literal('message'), z.literal('steps')]),
-    data: z.unknown(),
-  }))
+    .output(
+      z.object({
+        type: z.union([z.literal("message"), z.literal("steps")]),
+        data: z.unknown(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
 
@@ -52,12 +61,11 @@ export const diagrammatonRouter = createTRPCRouter({
         token: env.UPSTASH_REDIS_TOKEN,
       });
 
-      const rateLimiter =  new Ratelimit({
+      const rateLimiter = new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(1, "5 s"),
         analytics: true,
       });
-
 
       try {
         const { success } = await rateLimiter.limit(identifier);
@@ -128,7 +136,11 @@ export const diagrammatonRouter = createTRPCRouter({
           user: stringifiedUser,
         });
 
-        if (result.type === "message") {
+        if (!result || !result.data) {
+          throw new Error("Something happened");
+        }
+
+        if (result?.type === "message") {
           return { type: "message", data: result.data };
         }
 
@@ -147,6 +159,8 @@ export const diagrammatonRouter = createTRPCRouter({
         const diagramData: unknown[] = (parsedGrammar as unknown[]).filter(
           Boolean
         );
+
+        console.log({ diagramData });
 
         logInfo("Successfully generated diagram", {
           input,
@@ -183,12 +197,12 @@ async function getCompletion({
 
   try {
     chatCompletion = await openai.createChatCompletion({
-      model: input.model || GPTModels["gpt3"],
+      model: GPTModels[input.model ?? "gpt3"],
       functions,
       function_call: "auto",
       temperature: 0,
       messages: createMessages(input.diagramDescription),
-      max_tokens: 3000,
+      max_tokens: 2000,
     });
   } catch (err: unknown) {
     console.error(err);
@@ -203,32 +217,35 @@ async function getCompletion({
 
   if (choices && choices.length > 0) {
     const wantsToUseFunction = choices[0]?.finish_reason === "function_call";
-    console.log('Used function: ', wantsToUseFunction)
+
+    if (!wantsToUseFunction) {
+      console.log("Used message: ", choices[0]?.message?.content);
+      return { type: "message", data: choices[0]?.message?.content };
+    }
+
     if (wantsToUseFunction) {
-      console.log("Called: ", choices[0]?.message?.function_call?.name);
+      console.log("Used function: ", choices[0]?.message?.function_call?.name);
+      return handleFunctionCall(choices);
     }
+  } else {
+    throw new UnableToParseGPTResponse({ input, ...choices });
+  }
+}
 
-    if (!choices[0]?.message?.function_call?.arguments) {
-      throw new GPTFailedToCallFunction({ input, choices });
-    }
+const handleFunctionCall = (
+  choices: Array<CreateChatCompletionResponseChoicesInner>
+) => {
+  const args = choices[0]?.message?.function_call?.arguments;
 
-    console.log(JSON.parse(choices[0].message.function_call.arguments));
+  const { steps, message } = args
+    ? (JSON.parse(args) as { steps: string[][]; message: string })
+    : { steps: [], message: "" };
 
-    const { steps, message } = JSON.parse(
-      choices[0].message.function_call.arguments
-    ) as {
-      steps: string[][];
-      message: string;
-    };
+  if (message) {
+    return { type: "message", data: message };
+  }
 
-    if (message) {
-      return { type: "message", data: message };
-    }
-
-    // if (!steps?.length) throw new UnableToParseGPTResponse({ input, choices });
-
-    // console.log("Steps: ", steps)
-
+  if (steps.length > 0) {
     const combinedSteps = steps.reduce(
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       (acc: string, curr: string[]) => acc.concat(`${curr}\n`),
@@ -236,7 +253,5 @@ async function getCompletion({
     );
 
     return { type: "steps", data: combinedSteps };
-  } else {
-    throw new UnableToParseGPTResponse({ input });
   }
-}
+};

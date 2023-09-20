@@ -7,7 +7,7 @@ export const GPTModels = {
 export const functions = [
   {
     name: "print_diagram",
-    description: `Prints valid Mermaid syntax`,
+    description: `Translates a diagram description into valid, exhaustively detailed Mermaid diagram syntax while omitting the diagram direction (e.g. graph TD)`,
     parameters: {
       type: "object",
       properties: {
@@ -20,11 +20,12 @@ export const functions = [
         },
       },
     },
+    required: ["steps"],
   },
   {
     name: "print_error",
     description:
-      "Prints a user-readable error if there are any issues creating a diagram using valid Mermaid syntax, or if the user input is invalid",
+      "Prints a concise and friendly user-facing error if there are any issues creating a diagram using valid Mermaid syntax, or if the user input is invalid.",
     type: "object",
     parameters: {
       type: "object",
@@ -32,47 +33,24 @@ export const functions = [
         message: {
           type: "string",
           description:
-            "A concise description of the issue that will be displayed to the user",
+            "A friendly and concise description of the issue encountered",
         },
       },
     },
+    required: ["message"],
   },
 ];
 
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful AI assistant with deep knowledge and expertise in translating natural language descriptions into valid Mermaid diagram syntax. The first step is to understand the domain the user's diagram is in, e.g. a user flow, a data flow, a state machine, etc. The second step is to parse the user's natural language description into valid Mermaid syntax. The third step is to print the diagram.
+    content: `You are a helpful assistant that takes a description of a diagram as input and, if possible, attempts to print out a valid diagram using Mermaid diagram syntax that best matches the description. You take special care to ensure the syntax is valid and you delight in surprising the user by filling out conditions and other details the user may have overlooked or forgotten to describe, based on your vast diagramming knowledge repository.
     
-    You must call print_diagram if you are able to successfully parse the user's natural language description into valid Mermaid syntax, otherwise you must call print_error. Below are examples of user input and the expected response.
+    Here is an example of a diagram description and a response using valid Mermaid syntax:
 
-    [Example 1]
+    Diagram description: "a sign up flow"
 
-    User input: “a user flow in a fitness app where the user chooses between a workout or a meditation session.”
-
-    print_diagram response:
-
-    B --> C{First Time User?}
-    C -- Yes --> D[Show Onboarding]
-    C -- No --> E[Choose Activity]
-    D --> E
-    E --> F{Workout?}
-    F -- Yes --> G[Select Workout Type]
-    F -- No --> H[Select Meditation Type]
-    G --> I{Workout Type Exists?}
-    H --> J{Meditation Type Exists?}
-    I -- Yes --> K[\Start Workout/]
-    I -- No --> L[Show Error: "Workout Type Not Found"]
-    J -- Yes --> M[(Start Meditation)]
-    J -- No --> N[Show Error: "Meditation Type Not Found"]
-    K --> O[/End Workout/]
-    M --> P[\End Meditation\]
-
-    [Example 2]
-
-    User input: “A sign up flow”
-
-    print_diagram response:
+    Response:
 
     Start((Start)) --> EnterDetails(Enter User Details)
     EnterDetails --> ValidateDetails[Validate Details]
@@ -87,16 +65,10 @@ export const createMessages = (input: string) => [
     ConfirmAccount -- Not Confirmed --> SendConfirmationEmail[Send Confirmation Email]
     SendConfirmationEmail --> ConfirmAccount
     ConfirmAccount -- Confirmed --> End[End: Signup Complete]
-
-    [Example 3]
-
-    User input: A diagram
-
-    print_error response: "Can you provide more detail?"
-  `,
+    `,
   },
   {
     role: ChatCompletionRequestMessageRoleEnum.User,
-    content: `Call the print_diagram function using the following input: ${input}. If you are unable to parse it, call the print_error function instead.`,
+    content: `Diagram description: ${input}`,
   },
 ];
