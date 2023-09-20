@@ -174,10 +174,23 @@ async function getCompletion({
 
   let chatCompletion;
 
+  logInfo("Calling OpenAI API", {
+      model: input.model || GPTModels["gpt3"],
+      functions,
+      function_call: "auto",
+      temperature: 0,
+      messages: createMessages(input.diagramDescription),
+      max_tokens: 3000,
+    });
+
   try {
     chatCompletion = await openai.createChatCompletion({
       model: input.model || GPTModels["gpt3"],
+      functions,
+      function_call: "auto",
+      temperature: 0,
       messages: createMessages(input.diagramDescription),
+      max_tokens: 3000,
     });
   } catch (err: unknown) {
     console.error(err);
@@ -191,8 +204,12 @@ async function getCompletion({
   const choices = chatCompletion?.data.choices;
 
   if (choices && choices.length > 0) {
+    if (!choices[0]?.message?.function_call?.arguments) {
+      throw new Error("Invalid response from OpenAI API");
+    }
+
     const { steps, message } = JSON.parse(
-      choices[0]?.message?.function_call?.arguments as string
+      choices[0].message.function_call.arguments
     ) as {
       steps: string[][];
       message: string;

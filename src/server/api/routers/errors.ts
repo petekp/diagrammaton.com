@@ -15,7 +15,7 @@ export default function handleError(
   }
 
   throw new TRPCError({
-    message: "Unexpected error",
+    message: err.message,
     code: "INTERNAL_SERVER_ERROR",
   });
 }
