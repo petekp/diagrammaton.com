@@ -162,11 +162,7 @@ async function getCompletion({
   try {
     chatCompletion = await openai.createChatCompletion({
       model: input.model || GPTModels["gpt3"],
-      functions,
-      function_call: "auto",
-      temperature: 0,
       messages: createMessages(input.diagramDescription),
-      max_tokens: 5000,
     });
   } catch (err: unknown) {
     console.error(err);
