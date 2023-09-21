@@ -164,8 +164,6 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new Error("Something happened");
         }
 
-        console.log("data: ", result.data);
-
         const stepsDataSchema = stepsSchema.refine(
           (data) => {
             try {
@@ -241,6 +239,7 @@ async function getCompletion({
   const choices = chatCompletion?.data.choices;
 
   if (choices && choices.length > 0) {
+    console.log("Finish reason: ", choices[0]?.finish_reason);
     const wantsToUseFunction = choices[0]?.finish_reason === "function_call";
 
     if (!wantsToUseFunction) {
@@ -262,7 +261,7 @@ const handleFunctionCall = (
 ) => {
   const args = choices[0]?.message?.function_call?.arguments;
 
-  const { steps, message = "" } = args
+  const { steps, message } = args
     ? (JSON.parse(args) as {
         steps: {
           id: string;

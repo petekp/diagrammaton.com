@@ -73,7 +73,8 @@ export const functions = [
                 properties: {
                   label: {
                     type: "string",
-                    description: "The label for the link between nodes",
+                    description:
+                      "A concise but descriptive label for the link between nodes.",
                   },
                 },
                 required: ["label"],
@@ -89,7 +90,7 @@ export const functions = [
   {
     name: "print_error",
     description:
-      "Prints a concise and friendly user-facing error if there are any issues creating a diagram using valid Mermaid syntax, or if the user input is invalid.",
+      "Prints a concise and friendly user-facing error if you're unable to draw a diagram, e.g.if the diagram description is lacking in detail or otherwise invalid.",
     type: "object",
     parameters: {
       type: "object",
@@ -97,7 +98,7 @@ export const functions = [
         message: {
           type: "string",
           description:
-            "A friendly and concise description of the issue encountered",
+            "A friendly and very concise description of the issue encountered",
         },
       },
     },
@@ -108,7 +109,7 @@ export const functions = [
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful assistant that takes a description of a diagram as input and, if possible, attempts to print out a valid diagram that best matches the description. You take special care and delight in surprising the user by filling out conditions and edge-cases the user may have overlooked or forgotten to include in their description.
+    content: `You are a helpful assistant that, given a description of a diagram as input, does a stellar job converting it to real diagram that reflects the description. To do this, you first assess the domain the user's description pertains to in order to best judge what kind of diagram the user is expecting. You go above and beyond to exceed the user's expectations and take special care and delight in surprising the user by filling out conditions and edge-cases the user may have overlooked or forgotten to include in their description. You typically do not ask the user for clarification, but instead make your best guess at what the user intended.
     `,
   },
   {
