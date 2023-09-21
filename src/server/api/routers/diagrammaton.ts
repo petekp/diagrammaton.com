@@ -4,17 +4,19 @@ import {
   CreateChatCompletionResponseChoicesInner,
   OpenAIApi,
 } from "openai";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 import { env } from "~/env.mjs";
 
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import parser from "~/plugins/diagrammaton/grammar.js";
 import {
   GPTModels,
   functions,
   createMessages,
+  shapes,
 } from "~/plugins/diagrammaton/lib";
 import { logError, logInfo } from "~/utils/log";
 
@@ -32,6 +34,24 @@ import handleError, {
 
 export const runtime = "edge";
 
+const stepSchema = z.object({
+  from: z.object({
+    id: z.string(),
+    label: z.string(),
+    shape: z.string(),
+  }),
+  link: z.object({
+    label: z.string(),
+  }),
+  to: z.object({
+    id: z.string(),
+    label: z.string(),
+    shape: z.string(),
+  }),
+});
+
+const stepsSchema = z.array(stepSchema);
+
 export const diagrammatonRouter = createTRPCRouter({
   generate: publicProcedure
     .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
@@ -46,13 +66,41 @@ export const diagrammatonRouter = createTRPCRouter({
       })
     )
     .output(
-      z.object({
-        type: z.union([z.literal("message"), z.literal("steps")]),
-        data: z.unknown(),
-      })
+      z.union([
+        z.object({
+          type: z.literal("message"),
+          data: z.string(),
+        }),
+        z.object({
+          type: z.literal("steps"),
+          data: stepsSchema,
+        }),
+      ])
     )
     .mutation(async ({ ctx, input }) => {
       const identifier = input.licenseKey;
+
+      const redis = new Redis({
+        url: env.UPSTASH_REDIS_URL,
+        token: env.UPSTASH_REDIS_TOKEN,
+      });
+
+      const rateLimiter = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(1, "5 s"),
+        analytics: true,
+      });
+
+      try {
+        const { success } = await rateLimiter.limit(identifier);
+        if (!success) {
+          throw new RateLimitExceededError();
+        }
+      } catch (err) {
+        // Handle the error here
+        logError("Rate limiter error", { err });
+        throw err;
+      }
 
       if (!input.diagramDescription) {
         throw new NoDescriptionProvided({ input });
@@ -116,41 +164,42 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new Error("Something happened");
         }
 
-        if (result?.type === "message") {
-          return { type: "message", data: result.data };
-        }
+        console.log("data: ", result.data);
 
-        let parsedGrammar;
-
-        try {
-          parsedGrammar = parser.parse(result.data);
-        } catch (err) {
-          throw new UnableToParseGPTResponse({
-            user: stringifiedUser,
-            input,
-            steps: result.data,
-          });
-        }
-
-        const diagramData: unknown[] = (parsedGrammar as unknown[]).filter(
-          Boolean
+        const stepsDataSchema = stepsSchema.refine(
+          (data) => {
+            try {
+              stepsSchema.parse(data);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          {
+            message: "Unexpected data type for 'steps'",
+          }
         );
 
-        console.log({ diagramData });
+        if (result.type === "message") {
+          if (typeof result.data === "string") {
+            return { type: "message", data: result.data };
+          }
+          throw new Error("Unexpected data type for 'message'");
+        }
 
-        logInfo("Successfully generated diagram", {
-          input,
-          output: diagramData,
-        });
+        if (result.type === "steps") {
+          const data = stepsDataSchema.parse(result.data);
+          return { type: "steps", data };
+        }
 
-        return { type: "steps", data: diagramData };
+        throw new Error("Unexpected result type");
       } catch (err) {
         handleError(err as Error);
       } finally {
         clearTimeout(timeout);
       }
 
-      return { type: "message", data: null };
+      return { type: "message", data: "" };
     }),
 });
 
@@ -213,21 +262,24 @@ const handleFunctionCall = (
 ) => {
   const args = choices[0]?.message?.function_call?.arguments;
 
-  const { steps, message } = args
-    ? (JSON.parse(args) as { steps: string[][]; message: string })
-    : { steps: [], message: "" };
+  const { steps, message = "" } = args
+    ? (JSON.parse(args) as {
+        steps: {
+          id: string;
+          label: string;
+          shape: string;
+        }[];
+        message: string;
+      })
+    : { steps: null, message: null };
 
   if (message) {
     return { type: "message", data: message };
   }
 
-  if (steps.length > 0) {
-    const combinedSteps = steps.reduce(
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      (acc: string, curr: string[]) => acc.concat(`${curr}\n`),
-      ``
-    );
-
-    return { type: "steps", data: combinedSteps };
+  if (steps) {
+    return { type: "steps", data: steps };
   }
+
+  throw new GPTFailedToCallFunction({ choices });
 };

@@ -4,19 +4,83 @@ export const GPTModels = {
   gpt4: "gpt-4-0613",
 } as const;
 
+export const shapes = [
+  "ROUNDED_RECTANGLE",
+  "ELLIPSE",
+  "DIAMOND",
+  "SQUARE",
+  "TRIANGLE_UP",
+  "TRIANGLE_DOWN",
+  "ENG_DATABASE",
+  "PARALLELOGRAM_RIGHT",
+  "PARALLELOGRAM_LEFT",
+];
+
+const nodeSchema = {
+  type: "object",
+  properties: {
+    id: {
+      type: "string",
+      description:
+        "A unique identifier for the diagram node. Must be unique across all diagram nodes.",
+    },
+    label: {
+      type: "string",
+      description: "The label for the diagram node.",
+    },
+    shape: {
+      type: "string",
+      enum: shapes,
+      description:
+        "The shape for the diagram node. Must be one of the enum values.",
+    },
+  },
+  required: ["id", "label", "shape"],
+};
+
 export const functions = [
+  // {
+  //   name: "print_diagram",
+  //   description: `Translates a diagram description into valid, exhaustively detailed Mermaid diagram syntax while omitting the diagram direction (e.g. graph TD)`,
+  //   parameters: {
+  //     type: "object",
+  //     properties: {
+  //       steps: {
+  //         type: "array",
+  //         items: {
+  //           type: "string",
+  //         },
+  //         description: `An array of diagram steps in valid Mermaid syntax`,
+  //       },
+  //     },
+  //   },
+  //   required: ["steps"],
+  // },
   {
     name: "print_diagram",
-    description: `Translates a diagram description into valid, exhaustively detailed Mermaid diagram syntax while omitting the diagram direction (e.g. graph TD)`,
+    description: `Translates a diagram description into valid JSON`,
     parameters: {
       type: "object",
       properties: {
         steps: {
           type: "array",
           items: {
-            type: "string",
+            type: "object",
+            properties: {
+              from: nodeSchema,
+              link: {
+                type: "object",
+                properties: {
+                  label: {
+                    type: "string",
+                    description: "The label for the link between nodes",
+                  },
+                },
+                required: ["label"],
+              },
+              to: nodeSchema,
+            },
           },
-          description: `An array of diagram steps in valid Mermaid syntax`,
         },
       },
     },
@@ -44,27 +108,7 @@ export const functions = [
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful assistant that takes a description of a diagram as input and, if possible, attempts to print out a valid diagram using Mermaid diagram syntax that best matches the description. You take special care to ensure the syntax is valid and you delight in surprising the user by filling out conditions and other details the user may have overlooked or forgotten to describe, based on your vast diagramming knowledge repository.
-    
-    Here is an example of a diagram description and a response using valid Mermaid syntax:
-
-    Diagram description: "a sign up flow"
-
-    Response:
-
-    Start((Start)) --> EnterDetails(Enter User Details)
-    EnterDetails --> ValidateDetails[Validate Details]
-    ValidateDetails -- Valid --> SendVerificationEmail[\Send Verification Email/]
-    ValidateDetails -- Invalid --> ErrorDetails[/Show Error Message\]
-    ErrorDetails --> EnterDetails
-    SendVerificationEmail --> VerifyEmail[(Verify Email)]
-    VerifyEmail -- Not Verified --> SendVerificationEmail
-    VerifyEmail -- Verified --> AcceptTOS[Accept Terms of Service]
-    AcceptTOS -- Not Accepted --> End[End: User Exits]
-    AcceptTOS -- Accepted --> ConfirmAccount[Confirm Account]
-    ConfirmAccount -- Not Confirmed --> SendConfirmationEmail[Send Confirmation Email]
-    SendConfirmationEmail --> ConfirmAccount
-    ConfirmAccount -- Confirmed --> End[End: Signup Complete]
+    content: `You are a helpful assistant that takes a description of a diagram as input and, if possible, attempts to print out a valid diagram that best matches the description. You take special care and delight in surprising the user by filling out conditions and edge-cases the user may have overlooked or forgotten to include in their description.
     `,
   },
   {
