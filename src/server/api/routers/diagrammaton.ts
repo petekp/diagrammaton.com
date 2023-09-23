@@ -16,16 +16,17 @@ import {
   GPTModels,
   functions,
   createMessages,
-  shapes,
 } from "~/plugins/diagrammaton/lib";
-import { logError, logInfo } from "~/utils/log";
+import { logError } from "~/utils/log";
 
 import handleError, {
   ApiKeyNotFoundForUser,
+  DiagrammatonError,
   GPTFailedToCallFunction,
   InvalidApiKey,
   InvalidLicenseKey,
   NoDescriptionProvided,
+  NoFeedbackMessage,
   OpenAiError,
   RateLimitExceededError,
   UnableToParseGPTResponse,
@@ -33,6 +34,17 @@ import handleError, {
 } from "./errors";
 
 export const runtime = "edge";
+
+const redis = new Redis({
+  url: env.UPSTASH_REDIS_URL,
+  token: env.UPSTASH_REDIS_TOKEN,
+});
+
+const rateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(1, "5 s"),
+  analytics: true,
+});
 
 const stepSchema = z.object({
   from: z.object({
@@ -53,6 +65,139 @@ const stepSchema = z.object({
 const stepsSchema = z.array(stepSchema);
 
 export const diagrammatonRouter = createTRPCRouter({
+  verify: publicProcedure
+    .meta({ openapi: { method: "POST", path: "/diagrammaton/verify" } })
+    .input(
+      z.object({
+        licenseKey: z.string(),
+      })
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const identifier = ctx.ipAddress ?? input.licenseKey;
+
+      console.log("====================================");
+
+      console.log({ identifier });
+
+      try {
+        const { success } = await rateLimiter.limit(identifier);
+        console.log({ success });
+        console.log("====================================");
+        if (!success) {
+          throw new RateLimitExceededError();
+        }
+      } catch (err) {
+        logError("Rate limiter error", { err });
+        throw err;
+      }
+
+      try {
+        const licenseKey = await ctx.prisma.licenseKey.findUnique({
+          where: {
+            key: input.licenseKey,
+          },
+        });
+
+        if (!licenseKey) {
+          throw new InvalidLicenseKey({ input });
+        }
+
+        return {
+          success: true,
+          message: "License key is valid",
+        };
+      } catch (err) {
+        if (err instanceof DiagrammatonError) {
+          console.error(err);
+          logError(err.message, err.logArgs);
+          return { success: false, message: err.message };
+        }
+
+        handleError(err as Error);
+
+        return {
+          success: false,
+          message: "Unable to verify license key due to a server error",
+        };
+      }
+    }),
+
+  feedback: publicProcedure
+    .meta({ openapi: { method: "POST", path: "/diagrammaton/feedback" } })
+    .input(
+      z.object({
+        licenseKey: z.string(),
+        message: z.string(),
+      })
+    )
+    .output(
+      z.object({
+        success: z.boolean(),
+        message: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const identifier = ctx.ipAddress ?? input.licenseKey;
+
+      try {
+        const { success } = await rateLimiter.limit(identifier);
+        if (!success) {
+          throw new RateLimitExceededError();
+        }
+      } catch (err) {
+        // Handle the error here
+        logError("Rate limiter error", { err });
+        throw err;
+      }
+
+      if (!input.message) {
+        throw new NoFeedbackMessage();
+      }
+
+      try {
+        const licenseKey = await ctx.prisma.licenseKey.findUnique({
+          where: {
+            key: input.licenseKey,
+          },
+          include: {
+            user: true,
+          },
+        });
+
+        if (!licenseKey || !licenseKey.user) {
+          throw new InvalidLicenseKey({ input });
+        }
+
+        await ctx.prisma.feedback.create({
+          data: {
+            message: input.message,
+            userId: licenseKey.user.id,
+          },
+        });
+
+        return {
+          success: true,
+          message: "Feedback successfully saved.",
+        };
+      } catch (err) {
+        if (err instanceof DiagrammatonError) {
+          console.error(err);
+          logError(err.message, err.logArgs);
+          return { success: false, message: err.message };
+        }
+        handleError(err as Error);
+        return {
+          success: false,
+          message: "Unable to send feedback due to a erver error",
+        };
+      }
+    }),
   generate: publicProcedure
     .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
     .input(
@@ -75,21 +220,15 @@ export const diagrammatonRouter = createTRPCRouter({
           type: z.literal("steps"),
           data: stepsSchema,
         }),
+        z.object({
+          type: z.literal("error"),
+          data: z.string(),
+        }),
       ])
     )
     .mutation(async ({ ctx, input }) => {
-      const identifier = input.licenseKey;
-
-      const redis = new Redis({
-        url: env.UPSTASH_REDIS_URL,
-        token: env.UPSTASH_REDIS_TOKEN,
-      });
-
-      const rateLimiter = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(1, "5 s"),
-        analytics: true,
-      });
+      const startTime = Date.now();
+      const identifier = ctx.ipAddress ?? input.licenseKey;
 
       try {
         const { success } = await rateLimiter.limit(identifier);
@@ -120,6 +259,8 @@ export const diagrammatonRouter = createTRPCRouter({
           },
         });
 
+        console.log({ licenseKeys });
+
         if (!licenseKeys.length) {
           throw new InvalidLicenseKey({ input });
         }
@@ -138,6 +279,10 @@ export const diagrammatonRouter = createTRPCRouter({
         if (!user) {
           throw new UserNotFound({ input });
         }
+
+        const endTime2 = Date.now(); // End time
+        const timeTaken2 = (endTime2 - startTime) / 1000;
+        console.info(`User found: ${timeTaken2}s`);
 
         const stringifiedUser = JSON.stringify({
           ...user,
@@ -164,6 +309,10 @@ export const diagrammatonRouter = createTRPCRouter({
           throw new Error("Something happened");
         }
 
+        const endTime = Date.now(); // End time
+        const timeTaken = (endTime - startTime) / 1000;
+        console.info(`Time taken: ${timeTaken}s`);
+
         const stepsDataSchema = stepsSchema.refine(
           (data) => {
             try {
@@ -177,6 +326,8 @@ export const diagrammatonRouter = createTRPCRouter({
             message: "Unexpected data type for 'steps'",
           }
         );
+
+        console.log("Result: ", result.data);
 
         if (result.type === "message") {
           if (typeof result.data === "string") {
@@ -192,6 +343,11 @@ export const diagrammatonRouter = createTRPCRouter({
 
         throw new Error("Unexpected result type");
       } catch (err) {
+        if (err instanceof DiagrammatonError) {
+          console.error(err);
+          logError(err.message, err.logArgs);
+          return { type: "error", data: err.message };
+        }
         handleError(err as Error);
       } finally {
         clearTimeout(timeout);
@@ -218,18 +374,20 @@ async function getCompletion({
 
   let chatCompletion;
 
+  const tokenLimit = 4000 - input.diagramDescription.length;
+
   try {
     chatCompletion = await openai.createChatCompletion({
       model: GPTModels[input.model ?? "gpt3"],
       functions,
       function_call: "auto",
-      temperature: 0,
+      temperature: 0.4,
       messages: createMessages(input.diagramDescription),
-      max_tokens: 2000,
+      max_tokens: tokenLimit,
     });
   } catch (err: unknown) {
     console.error(err);
-    if ((err as { status: number }).status === 401) {
+    if ((err as { response: { status: number } }).response.status === 401) {
       throw new InvalidApiKey({ err, user });
     }
 
@@ -243,7 +401,25 @@ async function getCompletion({
     const wantsToUseFunction = choices[0]?.finish_reason === "function_call";
 
     if (!wantsToUseFunction) {
-      console.log("Used message: ", choices[0]?.message?.content);
+      const message = choices[0]?.message?.content;
+      console.log("Used message: ", message);
+
+      if (message) {
+        const jsonRegex = /{.*}/s;
+        const jsonMatch = message.match(jsonRegex);
+        let parsedMessage: { steps: Array<unknown> };
+
+        console.log({ jsonMatch });
+
+        if (jsonMatch) {
+          const jsonString = jsonMatch[0];
+          parsedMessage = JSON.parse(jsonString) as { steps: Array<unknown> };
+          console.log({ parsedMessage });
+
+          return { type: "steps", data: parsedMessage.steps };
+        }
+      }
+
       return { type: "message", data: choices[0]?.message?.content };
     }
 
@@ -273,6 +449,23 @@ const handleFunctionCall = (
     : { steps: null, message: null };
 
   if (message) {
+    const jsonRegex = /{.*}/;
+    const jsonMatch = message.match(jsonRegex);
+    let parsedMessage;
+
+    console.log({ jsonMatch });
+
+    if (jsonMatch) {
+      const jsonString = jsonMatch[0];
+      parsedMessage = JSON.parse(jsonString) as {
+        id: string;
+        label: string;
+        shape: string;
+      }[];
+
+      return { type: "steps", data: parsedMessage };
+    }
+
     return { type: "message", data: message };
   }
 

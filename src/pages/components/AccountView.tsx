@@ -25,6 +25,9 @@ const formSchema = z.object({
     .min(50, {
       message: "Invalid OpenAI key length, please verify and try again.",
     })
+    .max(50, {
+      message: "Invalid OpenAI key length, please verify and try again.",
+    })
     .startsWith("sk-", {
       message: "Invalid OpenAI key format, please verify and try again.",
     }),

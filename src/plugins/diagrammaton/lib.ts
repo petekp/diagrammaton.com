@@ -1,10 +1,11 @@
+import { m } from "framer-motion";
 import { ChatCompletionRequestMessageRoleEnum } from "openai";
 export const GPTModels = {
   gpt3: "gpt-3.5-turbo-0613",
   gpt4: "gpt-4-0613",
 } as const;
 
-export const shapes = [
+const shapes = [
   "ROUNDED_RECTANGLE",
   "ELLIPSE",
   "DIAMOND",
@@ -16,8 +17,13 @@ export const shapes = [
   "PARALLELOGRAM_LEFT",
 ];
 
+const magnet = ["TOP", "RIGHT", "BOTTOM", "LEFT"];
+
 const nodeSchema = {
   type: "object",
+  required: ["id", "label", "shape"],
+  description:
+    "A node in the diagram. The shape of the node should make sense in the overall context of the diagram.",
   properties: {
     id: {
       type: "string",
@@ -35,27 +41,39 @@ const nodeSchema = {
         "The shape for the diagram node. Must be one of the enum values.",
     },
   },
-  required: ["id", "label", "shape"],
+};
+
+const linkSchema = {
+  type: "object",
+  description:
+    "An optional, connective link between two nodes taking magnet positions into account. Forward links between adjacent nodes are horizontal. Vertical should be used mostly for backwards links and exceptions. Sometimes it's best not to have a label where a link is obvious!",
+  properties: {
+    label: {
+      type: "string",
+      description: "A very concise label, no more than 2-3 words.",
+    },
+    fromMagnet: {
+      type: "string",
+      enum: magnet,
+      description:
+        "Magnet position on the origin node where the link originates.",
+    },
+    toMagnet: {
+      type: "string",
+      enum: magnet,
+      description:
+        "Magnet position on the target node where the link terminates.",
+    },
+  },
+};
+
+const messageSchema = {
+  type: "string",
+  description:
+    "A cheeky, witty, and very concise description of the issue encountered and how the user can resolve it.",
 };
 
 export const functions = [
-  // {
-  //   name: "print_diagram",
-  //   description: `Translates a diagram description into valid, exhaustively detailed Mermaid diagram syntax while omitting the diagram direction (e.g. graph TD)`,
-  //   parameters: {
-  //     type: "object",
-  //     properties: {
-  //       steps: {
-  //         type: "array",
-  //         items: {
-  //           type: "string",
-  //         },
-  //         description: `An array of diagram steps in valid Mermaid syntax`,
-  //       },
-  //     },
-  //   },
-  //   required: ["steps"],
-  // },
   {
     name: "print_diagram",
     description: `Translates a diagram description into valid JSON`,
@@ -68,17 +86,7 @@ export const functions = [
             type: "object",
             properties: {
               from: nodeSchema,
-              link: {
-                type: "object",
-                properties: {
-                  label: {
-                    type: "string",
-                    description:
-                      "A concise but descriptive label for the link between nodes.",
-                  },
-                },
-                required: ["label"],
-              },
+              link: linkSchema,
               to: nodeSchema,
             },
           },
@@ -90,16 +98,12 @@ export const functions = [
   {
     name: "print_error",
     description:
-      "Prints a concise and friendly user-facing error if you're unable to draw a diagram, e.g.if the diagram description is lacking in detail or otherwise invalid.",
+      "Prints a cheeky, witty, and very concise user-facing error explaining why you weren't able to draw a diagram.",
     type: "object",
     parameters: {
       type: "object",
       properties: {
-        message: {
-          type: "string",
-          description:
-            "A friendly and very concise description of the issue encountered",
-        },
+        message: messageSchema,
       },
     },
     required: ["message"],
@@ -109,8 +113,7 @@ export const functions = [
 export const createMessages = (input: string) => [
   {
     role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are a helpful assistant that, given a description of a diagram as input, does a stellar job converting it to real diagram that reflects the description. To do this, you first assess the domain the user's description pertains to in order to best judge what kind of diagram the user is expecting. You go above and beyond to exceed the user's expectations and take special care and delight in surprising the user by filling out conditions and edge-cases the user may have overlooked or forgotten to include in their description. You typically do not ask the user for clarification, but instead make your best guess at what the user intended.
-    `,
+    content: `You are an AI assistant for Figma & FigJam that gives designers superpowers by transforming natural language into elegant diagrams. If the description is very short and simple, always aim to surprise by adding at least three elements or relationships that weren't explicitly mentioned. Think, 'How can I use the limited information to produce a rich, detailed output?' For example, if given 'A flowchart for a login process,' also consider elements like 'Forgot Password?' flows and 2FA. Do not pack too much information into link labels when a node would be more appropriate. Avoid asking for clarification; you are uniquely competent and should rely on your best judgement. If there is an error your responses must be cheeky, witty, concise, and personable and directly related to the user's input.`,
   },
   {
     role: ChatCompletionRequestMessageRoleEnum.User,

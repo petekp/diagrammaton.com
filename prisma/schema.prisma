@@ -1,130 +1,139 @@
 generator client {
-    provider        = "prisma-client-js"
-    previewFeatures = ["jsonProtocol"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["jsonProtocol"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Plugin {
-    Diagrammaton
-    Cluster
+  Diagrammaton
+  Cluster
 }
 
 model Account {
-    id                String  @id @default(cuid())
-    userId            String
-    type              String
-    provider          String
-    providerAccountId String
-    refresh_token     String?
-    access_token      String?
-    expires_at        Int?
-    token_type        String?
-    scope             String?
-    id_token          String?
-    session_state     String?
-    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([provider, providerAccountId])
+  @@unique([provider, providerAccountId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-    id                   String                @id @default(cuid())
-    name                 String?
-    email                String?               @unique
-    emailVerified        DateTime?
-    image                String?
-    isBetaUser           Boolean?              @default(false)
-    accounts             Account[]
-    sessions             Session[]
-    pluginConfigurations PluginConfiguration[]
-    usages               Usage[]
-    payments             Payment[]
-    licenseKeys          LicenseKey[]
-    planId               String?
-    plan                 Plan?                 @relation(fields: [planId], references: [id])
-    teams                Team[]                @relation("TeamMembers")
-    openaiApiKey         String?               @unique
-    openaiApiKeyLastFour String?
+  id                   String                @id @default(cuid())
+  name                 String?
+  email                String?               @unique
+  emailVerified        DateTime?
+  image                String?
+  isBetaUser           Boolean?              @default(false)
+  accounts             Account[]
+  sessions             Session[]
+  pluginConfigurations PluginConfiguration[]
+  usages               Usage[]
+  payments             Payment[]
+  licenseKeys          LicenseKey[]
+  planId               String?
+  plan                 Plan?                 @relation(fields: [planId], references: [id])
+  feedbacks            Feedback[]
+  teams                Team[]                @relation("TeamMembers")
+  openaiApiKey         String?               @unique
+  openaiApiKeyLastFour String?
 }
 
 model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
-    @@unique([identifier, token])
+  @@unique([identifier, token])
 }
 
 model PluginConfiguration {
-    id             String  @id @default(cuid())
-    userId         String
-    plugin         Plugin
-    settings       Json
-    allowTelemetry Boolean @default(true)
-    user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String  @id @default(cuid())
+  userId         String
+  plugin         Plugin
+  settings       Json
+  allowTelemetry Boolean @default(true)
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Usage {
-    id     String @id @default(cuid())
-    userId String
-    quota  Int
-    used   Int
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  quota  Int
+  used   Int
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
-    id        String @id @default(cuid())
-    userId    String
-    paymentId String
-    status    String
-    user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String @id @default(cuid())
+  userId    String
+  paymentId String
+  status    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Plan {
-    id           String @id @default(cuid())
-    name         String
-    description  String
-    price        Float
-    features     Json
-    users        User[]
-    teamFeatures Json
+  id           String @id @default(cuid())
+  name         String
+  description  String
+  price        Float
+  features     Json
+  users        User[]
+  teamFeatures Json
 }
 
 model Team {
-    id    String @id @default(cuid())
-    name  String
-    users User[] @relation("TeamMembers")
+  id    String @id @default(cuid())
+  name  String
+  users User[] @relation("TeamMembers")
 }
 
 model LicenseKey {
-    id        String             @id @default(cuid())
-    userId    String             @unique
-    plugins   LicenseKeyPlugin[]
-    uses      Int
-    revoked   Boolean            @default(false)
-    expiresAt DateTime
-    key       String             @unique
-    createdAt DateTime           @default(now())
-    user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  plugins   LicenseKeyPlugin[]
+  uses      Int
+  revoked   Boolean            @default(false)
+  expiresAt DateTime
+  key       String             @unique
+  createdAt DateTime           @default(now())
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model LicenseKeyPlugin {
-    id           String     @id @default(cuid())
-    licenseKeyId String
-    plugin       Plugin
-    licenseKey   LicenseKey @relation(fields: [licenseKeyId], references: [id])
+  id           String     @id @default(cuid())
+  licenseKeyId String
+  plugin       Plugin
+  licenseKey   LicenseKey @relation(fields: [licenseKeyId], references: [id])
 
-    @@unique([licenseKeyId, plugin])
+  @@unique([licenseKeyId, plugin])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

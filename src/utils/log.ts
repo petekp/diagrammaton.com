@@ -14,7 +14,7 @@ export function logError(message: string, data: LogArgument) {
 
 export function logInfo(
   message: string,
-  data: LogArgument,
+  data?: LogArgument,
   callback?: () => void
 ) {
   console.info(message, data);

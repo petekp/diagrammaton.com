@@ -26,6 +26,7 @@ import { prisma } from "~/server/db";
 
 type CreateContextOptions = {
   session: Session | null;
+  ipAddress: string | null;
 };
 
 /**
@@ -42,23 +43,30 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
+    ipAddress: opts.ipAddress,
   };
 };
 
 /**
- * This is the actual context you will use in your router. It will be used to process every request
- * that goes through your tRPC endpoint.
+ * This is the actual context you will use in your router. It will be used to process every request that goes through your tRPC endpoint.
  *
  * @see https://trpc.io/docs/context
  */
 export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   const { req, res } = opts;
-
-  // Get the session from the server using the getServerSession wrapper function
   const session = await getServerAuthSession({ req, res });
+  let ipAddress =
+    req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+
+  if (Array.isArray(ipAddress)) {
+    ipAddress = ipAddress[0];
+  }
+
+  ipAddress = ipAddress || "";
 
   return createInnerTRPCContext({
     session,
+    ipAddress,
   });
 };
 
@@ -119,6 +127,7 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
     ctx: {
       // infers the `session` as non-nullable
       session: { ...ctx.session, user: ctx.session.user },
+      ipAddress: "",
     },
   });
 });

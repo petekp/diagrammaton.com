@@ -3,7 +3,7 @@
     "compounds": [
     {
         "label": "Run all",
-        "dependsOn": ["npm run dev", "npm: watch:diagrammaton:grammar", "localtunnel:pete-dev"]
+        "dependsOn": ["npm run dev", "localtunnel:pete-dev"]
     }
     ],
     "tasks": [
@@ -19,16 +19,6 @@
         "presentation": {
           "panel": "dedicated",
           "clear": true
-        }
-      },
-      {
-        "type": "npm",
-        "script": "watch:diagrammaton:grammar",
-        "problemMatcher": [],
-        "label": "npm: watch:diagrammaton:grammar",
-        "isBackground": true,
-        "runOptions": {
-          "runOn": "folderOpen"
         }
       },
       {
