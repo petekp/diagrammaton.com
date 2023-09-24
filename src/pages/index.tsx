@@ -118,7 +118,7 @@ export default function Home({
           ) : null}
         </div>
         <div className="flex justify-center gap-1 text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Pete Petrash</p>
+          <p>&copy; {new Date().getFullYear()}</p>
           <span className="text-muted-foreground/40">•</span>
           <Link
             href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
