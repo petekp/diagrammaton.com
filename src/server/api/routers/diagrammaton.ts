@@ -374,7 +374,7 @@ async function getCompletion({
 
   let chatCompletion;
 
-  const tokenLimit = 4000 - input.diagramDescription.length;
+  const tokenLimit = 3500 - input.diagramDescription.length;
 
   try {
     chatCompletion = await openai.createChatCompletion({
