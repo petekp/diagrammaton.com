@@ -1,6 +1,7 @@
 import Head from "next/head";
 import { motion, type AnimationProps } from "framer-motion";
 import { ArrowRightIcon, DoorClosedIcon, DoorOpenIcon } from "lucide-react";
+import { authOptions } from "~/pages/api/auth/[...nextauth]";
 import Link from "next/link";
 import type {
   GetServerSidePropsContext,
@@ -16,12 +17,15 @@ import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
 
 const approxDiamondAnimLength = 2;
 
 export default function Home({
   providers,
   sessionData,
+  userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [signOutHovered, setSignOutHovered] = useState(false);
 
@@ -84,7 +88,11 @@ export default function Home({
           {...diamondAnimation}
           className="rounded-xs fixed h-[450px] w-[450px] origin-center rotate-45 border border-border bg-gradient-radial from-background to-background/70"
         ></motion.div>
-        <SignIn providers={providers} sessionData={sessionData} />
+        <SignIn
+          providers={providers}
+          sessionData={sessionData}
+          userData={userData}
+        />
       </main>
       <div className="fixed right-0 top-0 p-4 sm:right-5">
         <ThemeToggle />
@@ -144,6 +152,7 @@ export default function Home({
 function SignIn({
   providers,
   sessionData,
+  userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [eyeHeight, setEyeHeight] = useState(300);
 
@@ -279,7 +288,7 @@ function SignIn({
         </div>
         {sessionData && (
           <motion.div {...signInAnimation}>
-            <AccountView />
+            <AccountView userData={userData} />
           </motion.div>
         )}
         {!sessionData && (
@@ -312,7 +321,11 @@ function SignIn({
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
-  // const session = await getServerSession(context.req, context.res, authOptions);
+  const sessionData = await getServerSession(
+    context.req,
+    context.res,
+    authOptions
+  );
 
   // If the user is already logged in, redirect.
   // Note: Make sure not to redirect to the same page
@@ -322,14 +335,31 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   // }
 
   // update to use getServerSession
-  const sessionData = await getSession(context);
   const providers = await getProviders();
+
+  const prisma = new PrismaClient();
+  const userId = sessionData?.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    include: {
+      licenseKeys: true,
+    },
+  });
+
+  const licenseKey = user?.licenseKeys[0]?.key;
+  const openaiApiKeyMasked = user?.openaiApiKeyLastFour;
 
   return {
     props: {
       providers: providers ?? [],
       sessionData: sessionData ?? null,
-      // sessionData: true,
+      userData: {
+        licenseKey,
+        openaiApiKey: openaiApiKeyMasked,
+      },
     },
   };
 }

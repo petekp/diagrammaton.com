@@ -5,6 +5,25 @@ import { prisma } from "../../db";
 const apiKeyLastFourSchema = z.string().nullable();
 
 export const apiKeyRouter = createTRPCRouter({
+  validate: protectedProcedure
+    .input(z.string())
+    .output(z.boolean())
+    .mutation(async ({ input }) => {
+      const response = await fetch("https://api.openai.com/v1/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${input}`,
+        },
+        body: JSON.stringify({
+          prompt: "a",
+          model: "ada",
+          max_tokens: 1,
+        }),
+      });
+
+      return response.status === 200;
+    }),
   getUserKeyLastFour: protectedProcedure
     .output(apiKeyLastFourSchema)
     .query(async ({ ctx }) => {

@@ -4,6 +4,7 @@ import { type AppType } from "next/app";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { api } from "~/utils/api";
 import "~/styles/globals.css";
+import { TooltipProvider } from "@radix-ui/react-tooltip";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -12,7 +13,9 @@ const MyApp: AppType<{ session: Session | null }> = ({
   return (
     <SessionProvider session={session}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <Component {...pageProps} />
+        <TooltipProvider>
+          <Component {...pageProps} />
+        </TooltipProvider>
       </ThemeProvider>
     </SessionProvider>
   );
