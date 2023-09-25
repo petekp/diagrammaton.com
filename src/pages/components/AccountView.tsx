@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CornerLeftUp, InfoIcon, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
-import { AnimatePresence, AnimationProps, motion } from "framer-motion";
+import { AnimatePresence, type AnimationProps, motion } from "framer-motion";
 
 import { api } from "~/utils/api";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { InferGetServerSidePropsType } from "next";
-import { getServerSideProps } from "..";
+import type { InferGetServerSidePropsType } from "next";
+import type { getServerSideProps } from "..";
 
 const apiKeyMask = "sk-••••••••••••••••••••••••••••••••";
 
@@ -69,10 +69,10 @@ export default function AccountView({
     resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
-      openaiApiKey: userData.openaiApiKey
-        ? `${apiKeyMask}${userData.openaiApiKey}`
+      openaiApiKey: userData?.openaiApiKey
+        ? `${apiKeyMask}${userData?.openaiApiKey}`
         : "",
-      licenseKey: userData.licenseKey || "000000000000000000",
+      licenseKey: userData?.licenseKey || "000000000000000000",
     },
   });
 
@@ -136,7 +136,6 @@ export default function AccountView({
     session,
     setValue,
     generateLicenseKey,
-    isValid,
   ]);
 
   const onSubmitLicenseKey = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -262,7 +261,7 @@ export default function AccountView({
   const licenseKeyField = (
     <Controller
       name="licenseKey"
-      render={({ field, fieldState: { error } }) => (
+      render={({ fieldState: { error } }) => (
         <FormItem className="flex flex-col items-start">
           <FormLabel className="relative flex flex-1 justify-start gap-2">
             <span className="select-none">Your license key</span>

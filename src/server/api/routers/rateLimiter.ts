@@ -8,8 +8,10 @@ const redis = new Redis({
   token: env.UPSTASH_REDIS_TOKEN,
 });
 
-export default new Ratelimit({
+const rateLimit = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(1, "5 s"),
   analytics: true,
 });
+
+export default rateLimit;

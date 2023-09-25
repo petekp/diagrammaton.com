@@ -1,4 +1,3 @@
-import { m } from "framer-motion";
 import { ChatCompletionRequestMessageRoleEnum } from "openai";
 export const GPTModels = {
   gpt3: "gpt-3.5-turbo-0613",

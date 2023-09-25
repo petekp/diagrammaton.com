@@ -1,7 +1,7 @@
 import { type TRPC_ERROR_CODE_KEY } from "@trpc/server/rpc";
 import { logError } from "../../../utils/log";
 import { TRPCError } from "@trpc/server";
-import { LogArgument } from "rollbar";
+import type { LogArgument } from "rollbar";
 
 export default function handleError(
   err: {

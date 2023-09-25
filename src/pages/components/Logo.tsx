@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 
 export default function Logo() {
-  const [targetWidth, setTargetWidth] = useState(1);
-
-  const toggleStrokeWidth = () => {
-    setTargetWidth((prevWidth) => (prevWidth === 2 ? 8 : 2));
-  };
   return (
     <motion.svg
       className="fixed"

@@ -7,7 +7,7 @@ import type {
   GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
-import { getProviders, signIn, signOut, getSession } from "next-auth/react";
+import { getProviders, signIn, signOut } from "next-auth/react";
 import lexend from "../fonts";
 
 import { Button } from "@/components/ui/button";
@@ -349,8 +349,8 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     },
   });
 
-  const licenseKey = user?.licenseKeys[0]?.key;
-  const openaiApiKeyMasked = user?.openaiApiKeyLastFour;
+  const licenseKey = user?.licenseKeys[0]?.key || "";
+  const openaiApiKeyMasked = user?.openaiApiKeyLastFour || "";
 
   return {
     props: {

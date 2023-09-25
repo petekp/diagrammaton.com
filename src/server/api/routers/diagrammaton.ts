@@ -1,7 +1,7 @@
 import { type inferProcedureInput } from "@trpc/server";
 import {
   Configuration,
-  CreateChatCompletionResponseChoicesInner,
+  type CreateChatCompletionResponseChoicesInner,
   OpenAIApi,
 } from "openai";
 import { Ratelimit } from "@upstash/ratelimit";
