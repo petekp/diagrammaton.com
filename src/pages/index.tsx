@@ -326,40 +326,38 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     context.res,
     authOptions
   );
-
-  // If the user is already logged in, redirect.
-  // Note: Make sure not to redirect to the same page
-  // To avoid an infinite loop!
-  // if (session) {
-  //   return { redirect: { destination: "/" } };
-  // }
-
-  // update to use getServerSession
   const providers = await getProviders();
 
-  const prisma = new PrismaClient();
-  const userId = sessionData?.user.id;
+  // Default userData
+  let userData = {
+    licenseKey: "",
+    openaiApiKey: "",
+  };
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-    include: {
-      licenseKeys: true,
-    },
-  });
+  if (sessionData?.user?.id) {
+    const prisma = new PrismaClient();
+    const userId = sessionData.user.id;
 
-  const licenseKey = user?.licenseKeys[0]?.key || "";
-  const openaiApiKeyMasked = user?.openaiApiKeyLastFour || "";
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        licenseKeys: true,
+      },
+    });
+
+    userData = {
+      licenseKey: user?.licenseKeys[0]?.key || "",
+      openaiApiKey: user?.openaiApiKeyLastFour || "",
+    };
+  }
 
   return {
     props: {
       providers: providers ?? [],
       sessionData: sessionData ?? null,
-      userData: {
-        licenseKey,
-        openaiApiKey: openaiApiKeyMasked,
-      },
+      userData,
     },
   };
 }
