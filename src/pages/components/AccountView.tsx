@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { InferGetServerSidePropsType } from "next";
 import type { getServerSideProps } from "..";
+import { LICENSE_LENGTH } from "@/lib/utils";
 
 const apiKeyMask = "sk-••••••••••••••••••••••••••••••••";
 
@@ -49,11 +50,14 @@ export default function AccountView({
 }) {
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
-  const [animatedLicenseKey, setAnimatedLicenseKey] = useState("");
+  const [animatedLicenseKey, setAnimatedLicenseKey] = useState(
+    userData?.licenseKey || "API key required"
+  );
   const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       void utils.license.invalidate();
+      setAnimatedLicenseKey(data);
     },
   });
   const saveApiKey = api.apiKey.setUserApiKey.useMutation({
@@ -72,7 +76,7 @@ export default function AccountView({
       openaiApiKey: userData?.openaiApiKey
         ? `${apiKeyMask}${userData?.openaiApiKey}`
         : "",
-      licenseKey: userData?.licenseKey || "000000000000000000",
+      licenseKey: userData?.licenseKey || "0".repeat(LICENSE_LENGTH),
     },
   });
 
@@ -90,17 +94,15 @@ export default function AccountView({
     if (generateLicenseKey.isLoading) {
       const timer = setInterval(() => {
         setAnimatedLicenseKey(
-          Array.from({ length: 16 }, () =>
+          Array.from({ length: LICENSE_LENGTH }, () =>
             String.fromCharCode(Math.floor(Math.random() * 36) + 65).replace(
               /91-96/,
               (c) => String.fromCharCode(c.charCodeAt(0) - 26)
             )
           ).join("")
         );
-      }, 100);
+      }, 50);
       return () => clearInterval(timer);
-    } else {
-      setAnimatedLicenseKey("00300fjsdfsdj39h");
     }
   }, [generateLicenseKey.isLoading]);
 
@@ -224,7 +226,7 @@ export default function AccountView({
           <AnimatePresence>
             {error && (
               <motion.p
-                {...errorAnimation}
+                {...revealAnimation}
                 className="error-message select-none text-xs text-orange-700 dark:text-orange-400"
               >
                 {error.message}
@@ -245,7 +247,7 @@ export default function AccountView({
     },
   };
 
-  const errorAnimation: AnimationProps = {
+  const revealAnimation: AnimationProps = {
     initial: { opacity: 0, height: 0 },
     animate: {
       opacity: 1,
@@ -257,6 +259,9 @@ export default function AccountView({
       height: 0,
     },
   };
+
+  const hasLicenseKey =
+    userData?.licenseKey || licenseKeyQuery.data || animatedLicenseKey;
 
   const licenseKeyField = (
     <Controller
@@ -282,53 +287,72 @@ export default function AccountView({
             <div className=" flex w-full flex-row gap-1">
               <div className="relative flex flex-1 flex-col gap-2">
                 <div className="flex flex-1 items-center gap-2">
-                  <p
-                    className={`font-mono text-2xl ${
-                      licenseKeyFieldIsLoading
-                        ? "text-gray-400 dark:text-gray-500 "
-                        : "text-purple-600 dark:text-green-400"
-                    } `}
-                  >
-                    <AnimatePresence>
-                      {animatedLicenseKey.split("").map((char, index) => (
-                        <motion.span key={index} {...letterAnimation}>
-                          {char}
-                        </motion.span>
-                      ))}
-                    </AnimatePresence>
-                  </p>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        className="h-7"
-                        variant="link"
-                        disabled={licenseKeyFieldIsLoading}
-                        onClick={(e) => void onSubmitLicenseKey(e)}
+                  {animatedLicenseKey ? (
+                    <>
+                      <p
+                        className={`font-mono text-2xl ${
+                          licenseKeyFieldIsLoading
+                            ? "text-gray-400 dark:text-gray-500 "
+                            : "text-purple-600 dark:text-green-400"
+                        } `}
                       >
-                        <RefreshCcw
-                          size={16}
-                          className={`border-3 ${
-                            generateLicenseKey.isLoading ? "animate-spin" : ""
-                          } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Regenerate key</TooltipContent>
-                  </Tooltip>
+                        <AnimatePresence>
+                          {animatedLicenseKey.split("").map((char, index) => (
+                            <motion.span key={index} {...letterAnimation}>
+                              {char}
+                            </motion.span>
+                          ))}
+                        </AnimatePresence>
+                      </p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className="h-7"
+                            variant="link"
+                            disabled={licenseKeyFieldIsLoading}
+                            onClick={(e) => void onSubmitLicenseKey(e)}
+                          >
+                            <RefreshCcw
+                              size={16}
+                              className={`border-3 ${
+                                generateLicenseKey.isLoading
+                                  ? "animate-spin"
+                                  : ""
+                              } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Regenerate key</TooltipContent>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <p className="font-mono text-xl text-gray-400">
+                      API key required
+                    </p>
+                  )}
                 </div>
-                <span className="flex select-none items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                  <CornerLeftUp size={14} className="mt-[-2px]" />
-                  <Button
-                    disabled={licenseKeyFieldIsLoading || !licenseKeyQuery.data}
-                    variant="secondary"
-                    type="button"
-                    className="h-6 w-12"
-                    onClick={(e) => copyLicenseKey(e)}
-                  >
-                    Copy
-                  </Button>
-                  and paste me in the plugin!
-                </span>
+                <AnimatePresence>
+                  {hasLicenseKey && (
+                    <motion.div
+                      {...revealAnimation}
+                      className="flex select-none items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                      <CornerLeftUp size={14} className="mt-[-2px]" />
+                      <Button
+                        disabled={
+                          licenseKeyFieldIsLoading || !licenseKeyQuery.data
+                        }
+                        variant="secondary"
+                        type="button"
+                        className="h-6 w-12"
+                        onClick={(e) => copyLicenseKey(e)}
+                      >
+                        Copy
+                      </Button>
+                      and paste me in the plugin!
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </FormControl>
@@ -336,7 +360,7 @@ export default function AccountView({
           <AnimatePresence>
             {error && (
               <motion.p
-                {...errorAnimation}
+                {...revealAnimation}
                 className="error-message select-none text-xs text-orange-700 dark:text-orange-400"
               >
                 {error.message}
