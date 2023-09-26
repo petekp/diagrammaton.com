@@ -17,7 +17,7 @@ import {
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
-import { logError } from "~/utils/log";
+import { logError, logInfo } from "~/utils/log";
 
 import handleError, {
   ApiKeyNotFoundForUser,
@@ -312,6 +312,12 @@ export const diagrammatonRouter = createTRPCRouter({
         const endTime = Date.now(); // End time
         const timeTaken = (endTime - startTime) / 1000;
         console.info(`Time taken: ${timeTaken}s`);
+
+        logInfo("Successfully generated diagram", {
+          input,
+          result,
+          timeTaken,
+        });
 
         const stepsDataSchema = stepsSchema.refine(
           (data) => {
