@@ -33,7 +33,9 @@ import handleError, {
   UserNotFound,
 } from "./errors";
 
-export const runtime = "edge";
+export const config = {
+  runtime: "edge",
+};
 
 const redis = new Redis({
   url: env.UPSTASH_REDIS_URL,
