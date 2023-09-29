@@ -1,9 +1,6 @@
 import { type inferProcedureInput } from "@trpc/server";
-import {
-  Configuration,
-  type CreateChatCompletionResponseChoicesInner,
-  OpenAIApi,
-} from "openai";
+
+import OpenAI from "openai";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -32,6 +29,8 @@ import handleError, {
   UnableToParseGPTResponse,
   UserNotFound,
 } from "./errors";
+import { CompletionChoice } from "openai/resources";
+import { ChatCompletion } from "openai/resources/chat";
 
 export const config = {
   runtime: "edge",
@@ -374,18 +373,16 @@ async function getCompletion({
   input: inferProcedureInput<typeof diagrammatonRouter.generate>;
   apiKey: string;
 }) {
-  const configuration = new Configuration({
+  const openai = new OpenAI({
     apiKey,
   });
-
-  const openai = new OpenAIApi(configuration);
 
   let chatCompletion;
 
   const tokenLimit = 3500 - input.diagramDescription.length;
 
   try {
-    chatCompletion = await openai.createChatCompletion({
+    chatCompletion = await openai.chat.completions.create({
       model: GPTModels[input.model ?? "gpt3"],
       functions,
       function_call: "auto",
@@ -402,7 +399,7 @@ async function getCompletion({
     throw new OpenAiError({ err, input });
   }
 
-  const choices = chatCompletion?.data.choices;
+  const choices: Array<ChatCompletion.Choice> = chatCompletion?.choices;
 
   if (choices && choices.length > 0) {
     console.log("Finish reason: ", choices[0]?.finish_reason);
@@ -440,9 +437,7 @@ async function getCompletion({
   }
 }
 
-const handleFunctionCall = (
-  choices: Array<CreateChatCompletionResponseChoicesInner>
-) => {
+const handleFunctionCall = (choices: Array<ChatCompletion.Choice>) => {
   const args = choices[0]?.message?.function_call?.arguments;
 
   const { steps, message } = args

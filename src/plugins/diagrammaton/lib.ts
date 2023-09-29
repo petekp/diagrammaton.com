@@ -1,4 +1,4 @@
-import { ChatCompletionRequestMessageRoleEnum } from "openai";
+import { ChatCompletionMessage } from "openai/resources/chat";
 export const GPTModels = {
   gpt3: "gpt-3.5-turbo-0613",
   gpt4: "gpt-4-0613",
@@ -109,13 +109,13 @@ export const functions = [
   },
 ];
 
-export const createMessages = (input: string) => [
+export const createMessages = (input: string): Array<ChatCompletionMessage> => [
   {
-    role: ChatCompletionRequestMessageRoleEnum.System,
-    content: `You are an AI assistant for Figma & FigJam, empowering designers with rich diagrams from simple text. For basic tasks, amplify the detail—think 'Forgot Password?' in a login flow. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. When an endpoint exists, show what triggers it. Link labels should remain succinct, using nodes for elaboration. Errors should be cheeky but technically sound. Aim for nuance without overcomplication.`,
+    role: "system",
+    content: `You are an AI assistant for Figma & FigJam, empowering designers with rich diagrams from simple text. For basic tasks, amplify the detail—think 'Forgot Password?' in a login flow. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. When an endpoint exists, show what triggers it. Link labels should remain succinct, using nodes for elaboration. Errors should be humorous/cheeky but helpful. Aim for nuance without overcomplication.`,
   },
   {
-    role: ChatCompletionRequestMessageRoleEnum.User,
+    role: "user",
     content: `Diagram description: ${input}`,
   },
 ];
