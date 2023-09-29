@@ -27,6 +27,7 @@ export const env = createEnv({
     ROLLBAR_ACCESS_TOKEN: z.string(),
     UPSTASH_REDIS_URL: z.string().url(),
     UPSTASH_REDIS_TOKEN: z.string(),
+    OPENAI_API_KEY: z.string(),
   },
 
   /**
@@ -53,6 +54,7 @@ export const env = createEnv({
     ROLLBAR_ACCESS_TOKEN: process.env.ROLLBAR_ACCESS_TOKEN,
     UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
     UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
