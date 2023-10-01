@@ -1,30 +1,33 @@
-import OpenAI from "openai";
-import { OpenAIStream, StreamingTextResponse } from "ai";
 import {
-  GPTModels,
+  OpenAIStream,
+  StreamingTextResponse,
+  experimental_StreamData,
+} from "ai";
+import OpenAI from "openai";
+import {
   functions,
   createMessages,
+  GPTModels,
 } from "~/plugins/diagrammaton/lib";
-
-// Create an OpenAI API client (that's edge friendly!)
+import type { ChatCompletionCreateParams } from "openai/resources/chat";
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
 
-// IMPORTANT! Set the runtime to edge
 export const runtime = "edge";
+
+export async function OPTIONS(req: Request) {
+  const response = new Response(null, { status: 204 });
+  return response;
+}
 
 export async function POST(req: Request) {
   // Extract the `messages` from the body of the request
   const { input } = await req.json();
 
-  console.log("req", req);
-
-  console.log("input", input);
-
-  // Ask OpenAI for a streaming chat completion given the prompt
+  // Request the OpenAI API for the response based on the prompt
   const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+    model: GPTModels["gpt3"],
     stream: true,
     messages: createMessages(input),
     functions,
@@ -32,8 +35,7 @@ export async function POST(req: Request) {
 
   // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response);
+
   // Respond with the stream
   return new StreamingTextResponse(stream);
 }
-
-export default POST;
