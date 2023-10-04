@@ -1,15 +1,11 @@
-import {
-  OpenAIStream,
-  StreamingTextResponse,
-  experimental_StreamData,
-} from "ai";
+import { OpenAIStream, StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 import {
   functions,
   createMessages,
   GPTModels,
 } from "~/plugins/diagrammaton/lib";
-import type { ChatCompletionCreateParams } from "openai/resources/chat";
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
@@ -17,25 +13,25 @@ const openai = new OpenAI({
 export const runtime = "edge";
 
 export async function OPTIONS(req: Request) {
-  const response = new Response(null, { status: 204 });
-  return response;
+  return new Response(null, { status: 204 });
 }
 
 export async function POST(req: Request) {
-  // Extract the `messages` from the body of the request
-  const { input } = await req.json();
+  const { input, model = "gpt4" } = (await req.json()) as {
+    input: string;
+    model: keyof typeof GPTModels;
+  };
 
-  // Request the OpenAI API for the response based on the prompt
+  console.log("Input: ", input);
+
   const response = await openai.chat.completions.create({
-    model: GPTModels["gpt3"],
+    model: GPTModels[model],
     stream: true,
     messages: createMessages(input),
     functions,
   });
 
-  // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response);
 
-  // Respond with the stream
   return new StreamingTextResponse(stream);
 }
