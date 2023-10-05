@@ -8,8 +8,6 @@ import cors from "nextjs-cors";
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   await cors(req, res);
 
-  console.log("req", req);
-
   // Handle incoming OpenAPI requests
   return createOpenApiNextHandler({
     router: appRouter,

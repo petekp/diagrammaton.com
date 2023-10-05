@@ -1,10 +1,6 @@
 import { type inferProcedureInput } from "@trpc/server";
 
 import OpenAI from "openai";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-
-import { env } from "~/env.mjs";
 
 import { z } from "zod";
 
@@ -25,29 +21,13 @@ import handleError, {
   NoDescriptionProvided,
   NoFeedbackMessage,
   OpenAiError,
-  RateLimitExceededError,
   UnableToParseGPTResponse,
-  UserNotFound,
 } from "./errors";
-import { CompletionChoice } from "openai/resources";
 import { ChatCompletion } from "openai/resources/chat";
+import { checkRateLimit } from "~/app/rateLimiter";
+import { fetchUserByLicenseKey, verifyLicenseKey } from "~/app/dataHelpers";
 
-export const config = {
-  runtime: "edge",
-};
-
-const redis = new Redis({
-  url: env.UPSTASH_REDIS_URL,
-  token: env.UPSTASH_REDIS_TOKEN,
-});
-
-const rateLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(2, "5 s"),
-  analytics: true,
-});
-
-const stepSchema = z.object({
+export const stepSchema = z.object({
   from: z.object({
     id: z.string(),
     label: z.string(),
@@ -63,7 +43,16 @@ const stepSchema = z.object({
   }),
 });
 
-const stepsSchema = z.array(stepSchema);
+export const generateInputSchema = z.object({
+  licenseKey: z.string(),
+  diagramDescription: z.string(),
+  model: z
+    .union([z.literal("gpt3"), z.literal("gpt4")])
+    .optional()
+    .default("gpt3"),
+});
+
+export const stepsSchema = z.array(stepSchema);
 
 export const diagrammatonRouter = createTRPCRouter({
   verify: publicProcedure
@@ -80,53 +69,8 @@ export const diagrammatonRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const identifier = ctx.ipAddress ?? input.licenseKey;
-
-      console.log("====================================");
-
-      console.log({ identifier });
-
-      try {
-        const { success } = await rateLimiter.limit(identifier);
-        console.log({ success });
-        console.log("====================================");
-        if (!success) {
-          throw new RateLimitExceededError();
-        }
-      } catch (err) {
-        logError("Rate limiter error", { err });
-        throw err;
-      }
-
-      try {
-        const licenseKey = await ctx.prisma.licenseKey.findUnique({
-          where: {
-            key: input.licenseKey,
-          },
-        });
-
-        if (!licenseKey) {
-          throw new InvalidLicenseKey({ input });
-        }
-
-        return {
-          success: true,
-          message: "License key is valid",
-        };
-      } catch (err) {
-        if (err instanceof DiagrammatonError) {
-          console.error(err);
-          logError(err.message, err.logArgs);
-          return { success: false, message: err.message };
-        }
-
-        handleError(err as Error);
-
-        return {
-          success: false,
-          message: "Unable to verify license key due to a server error",
-        };
-      }
+      await checkRateLimit(ctx.ipAddress ?? input.licenseKey);
+      return await verifyLicenseKey(input.licenseKey);
     }),
 
   feedback: publicProcedure
@@ -144,41 +88,19 @@ export const diagrammatonRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const identifier = ctx.ipAddress ?? input.licenseKey;
-
-      try {
-        const { success } = await rateLimiter.limit(identifier);
-        if (!success) {
-          throw new RateLimitExceededError();
-        }
-      } catch (err) {
-        // Handle the error here
-        logError("Rate limiter error", { err });
-        throw err;
-      }
+      await checkRateLimit(ctx.ipAddress ?? input.licenseKey);
 
       if (!input.message) {
         throw new NoFeedbackMessage();
       }
 
       try {
-        const licenseKey = await ctx.prisma.licenseKey.findUnique({
-          where: {
-            key: input.licenseKey,
-          },
-          include: {
-            user: true,
-          },
-        });
-
-        if (!licenseKey || !licenseKey.user) {
-          throw new InvalidLicenseKey({ input });
-        }
+        const { user } = await fetchUserByLicenseKey(input.licenseKey);
 
         await ctx.prisma.feedback.create({
           data: {
             message: input.message,
-            userId: licenseKey.user.id,
+            userId: user.id,
           },
         });
 
@@ -192,6 +114,7 @@ export const diagrammatonRouter = createTRPCRouter({
           logError(err.message, err.logArgs);
           return { success: false, message: err.message };
         }
+
         handleError(err as Error);
         return {
           success: false,
@@ -201,16 +124,7 @@ export const diagrammatonRouter = createTRPCRouter({
     }),
   generate: publicProcedure
     .meta({ openapi: { method: "POST", path: "/diagrammaton/generate" } })
-    .input(
-      z.object({
-        licenseKey: z.string(),
-        diagramDescription: z.string(),
-        model: z
-          .union([z.literal("gpt3"), z.literal("gpt4")])
-          .optional()
-          .default("gpt3"),
-      })
-    )
+    .input(generateInputSchema)
     .output(
       z.union([
         z.object({
@@ -231,16 +145,7 @@ export const diagrammatonRouter = createTRPCRouter({
       const startTime = Date.now();
       const identifier = ctx.ipAddress ?? input.licenseKey;
 
-      try {
-        const { success } = await rateLimiter.limit(identifier);
-        if (!success) {
-          throw new RateLimitExceededError();
-        }
-      } catch (err) {
-        // Handle the error here
-        logError("Rate limiter error", { err });
-        throw err;
-      }
+      await checkRateLimit(identifier);
 
       if (!input.diagramDescription) {
         throw new NoDescriptionProvided({ input });
@@ -254,36 +159,7 @@ export const diagrammatonRouter = createTRPCRouter({
       }, 55000);
 
       try {
-        const licenseKeys = await ctx.prisma.licenseKey.findMany({
-          where: {
-            key: input.licenseKey,
-          },
-        });
-
-        console.log({ licenseKeys });
-
-        if (!licenseKeys.length) {
-          throw new InvalidLicenseKey({ input });
-        }
-
-        const user = await ctx.prisma.user.findUnique({
-          where: {
-            id: licenseKeys[0]?.userId,
-          },
-          select: {
-            id: true,
-            email: true,
-            openaiApiKey: true,
-          },
-        });
-
-        if (!user) {
-          throw new UserNotFound({ input });
-        }
-
-        const endTime2 = Date.now(); // End time
-        const timeTaken2 = (endTime2 - startTime) / 1000;
-        console.info(`User found: ${timeTaken2}s`);
+        const { user } = await fetchUserByLicenseKey(input.licenseKey);
 
         const stringifiedUser = JSON.stringify({
           ...user,
@@ -392,6 +268,7 @@ async function getCompletion({
     });
   } catch (err: unknown) {
     console.error(err);
+
     if ((err as { response: { status: number } }).response.status === 401) {
       throw new InvalidApiKey({ err, user });
     }

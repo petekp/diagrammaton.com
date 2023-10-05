@@ -8,7 +8,7 @@ const rollbar = new Rollbar({
   scrubFields: ["openaiApiKey"],
 });
 
-export function logError(message: string, data: LogArgument) {
+export function logError(message: string, data?: LogArgument) {
   console.error(message, data);
   rollbar.error(message, data);
 }

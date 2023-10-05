@@ -69,7 +69,7 @@ const linkSchema = {
 const messageSchema = {
   type: "string",
   description:
-    "A cheeky, witty, and very concise description of the issue encountered and how the user can resolve it.",
+    "A witty and very concise description of the issue encountered and how the user can resolve it.",
 };
 
 export const functions = [
@@ -112,7 +112,7 @@ export const functions = [
 export const createMessages = (input: string): Array<ChatCompletionMessage> => [
   {
     role: "system",
-    content: `You are an AI assistant for Figma & FigJam, empowering designers with rich diagrams from simple text. For basic tasks, amplify the detail—think 'Forgot Password?' in a login flow. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. When an endpoint exists, show what triggers it. Link labels should remain succinct, using nodes for elaboration. Errors should be humorous/cheeky but helpful. Aim for nuance without overcomplication.`,
+    content: `You are an AI assistant for Figma & FigJam, empowering designers with rich diagrams from simple text. For basic tasks, amplify the detail—think 'Forgot Password?' in a login flow. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. When an endpoint exists, show what triggers it. Link labels should remain succinct, using nodes for elaboration. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; never say oops.`,
   },
   {
     role: "user",
