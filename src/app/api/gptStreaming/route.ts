@@ -16,7 +16,7 @@ import {
 import { logError } from "~/utils/log";
 import { NextResponse } from "next/server";
 
-export async function OPTIONS(req: Request) {
+export function OPTIONS(req: Request) {
   return new Response(null, { status: 204 });
 }
 

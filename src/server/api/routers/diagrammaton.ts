@@ -1,31 +1,27 @@
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { type inferProcedureInput } from "@trpc/server";
-
 import OpenAI from "openai";
-
+import { ChatCompletion } from "openai/resources/chat";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { fetchUserByLicenseKey, verifyLicenseKey } from "~/app/dataHelpers";
 import {
   GPTModels,
   functions,
   createMessages,
 } from "~/plugins/diagrammaton/lib";
+import { checkRateLimit } from "~/app/rateLimiter";
 import { logError, logInfo } from "~/utils/log";
-
 import handleError, {
   ApiKeyNotFoundForUser,
   DiagrammatonError,
   GPTFailedToCallFunction,
   InvalidApiKey,
-  InvalidLicenseKey,
   NoDescriptionProvided,
   NoFeedbackMessage,
   OpenAiError,
   UnableToParseGPTResponse,
 } from "./errors";
-import { ChatCompletion } from "openai/resources/chat";
-import { checkRateLimit } from "~/app/rateLimiter";
-import { fetchUserByLicenseKey, verifyLicenseKey } from "~/app/dataHelpers";
 
 export const stepSchema = z.object({
   from: z.object({

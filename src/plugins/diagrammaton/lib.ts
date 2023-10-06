@@ -37,7 +37,7 @@ const nodeSchema = {
       type: "string",
       enum: shapes,
       description:
-        "The shape for the diagram node. Must be one of the enum values.",
+        "The shape for the diagram node. Must be one of the provided enum values.",
     },
   },
 };
@@ -45,11 +45,20 @@ const nodeSchema = {
 const linkSchema = {
   type: "object",
   description:
-    "An optional, connective link between two nodes taking magnet positions into account. Forward links between adjacent nodes are horizontal. Vertical should be used mostly for backwards links and exceptions. Sometimes it's best not to have a label where a link is obvious!",
+    "Completely optional, connective link between two nodes taking magnet positions into account. Forward links between adjacent nodes are horizontal. Vertical should be used mostly for backwards links and exceptions. Sometimes it's best not to have a label where a link is obvious!",
   properties: {
     label: {
       type: "string",
-      description: "A very concise label, no more than 2-3 words.",
+      description:
+        "A completely optional (can be blank!), very concise label of no more than 2-3 words.",
+    },
+    fromNodeId: {
+      type: "string",
+      description: "ID of the origin node",
+    },
+    toNodeId: {
+      type: "string",
+      description: "ID of the target node",
     },
     fromMagnet: {
       type: "string",
@@ -69,12 +78,12 @@ const linkSchema = {
 const messageSchema = {
   type: "string",
   description:
-    "A witty and very concise description of the issue encountered and how the user can resolve it.",
+    "A witty, humorous, and very concise description of the issue encountered and how the user can resolve it.",
 };
 
 export const functions = [
   {
-    name: "print_diagram",
+    name: "generate_diagram_json",
     description: `Translates a diagram description into valid JSON`,
     parameters: {
       type: "object",
@@ -95,9 +104,9 @@ export const functions = [
     required: ["steps"],
   },
   {
-    name: "print_error",
+    name: "generate_error_message",
     description:
-      "Prints a cheeky, witty, and very concise user-facing error explaining why you weren't able to draw a diagram.",
+      "Prints witty and very concise user-facing error explaining why you weren't able to draw a diagram based on the provided diagram description.",
     type: "object",
     parameters: {
       type: "object",
@@ -112,7 +121,7 @@ export const functions = [
 export const createMessages = (input: string): Array<ChatCompletionMessage> => [
   {
     role: "system",
-    content: `You are an AI assistant for Figma & FigJam, empowering designers with rich diagrams from simple text. For basic tasks, amplify the detail—think 'Forgot Password?' in a login flow. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. When an endpoint exists, show what triggers it. Link labels should remain succinct, using nodes for elaboration. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; never say oops.`,
+    content: `You are a helpful AI assistant for a diagramming FigJam plugin. The purpose of the plugin is to give designers superpowers by generating astonishingly detailed diagrams from often limited or brief natural language text descriptions, saving tons of time and creating a wow moment. Always go above and beyond in inferring details not included in the description—e.g.'Forgot Password?' in a login flow and other easy to forget edge cases. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. Link labels should remain crisp and succinct. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; don't apologize or say things like "oops". `,
   },
   {
     role: "user",
