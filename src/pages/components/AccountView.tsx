@@ -243,7 +243,12 @@ export default function AccountView({
     initial: { opacity: 1, y: -10 },
     animate: {
       y: Math.random() > 0.5 ? 10 : -10,
-      transition: { type: "spring", damping: 40, stiffness: 150 },
+      transition: {
+        type: "spring",
+        damping: 40,
+        stiffness: 150,
+        restDelta: 0.001,
+      },
     },
   };
 
@@ -252,7 +257,12 @@ export default function AccountView({
     animate: {
       opacity: 1,
       height: "auto",
-      transition: { type: "spring", damping: 15, stiffness: 250 },
+      transition: {
+        type: "spring",
+        damping: 15,
+        stiffness: 250,
+        restDelta: 0.001,
+      },
     },
     exit: {
       opacity: 0,

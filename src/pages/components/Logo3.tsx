@@ -1,8 +1,4 @@
-import {
-  animate,
-  motion,
-  useMotionValue,
-} from "framer-motion";
+import { animate, motion, useMotionValue } from "framer-motion";
 import { useEffect } from "react";
 
 export default function Logo3({

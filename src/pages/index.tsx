@@ -1,5 +1,10 @@
 import Head from "next/head";
-import { motion, type AnimationProps } from "framer-motion";
+import {
+  motion,
+  type AnimationProps,
+  useCycle,
+  useAnimation,
+} from "framer-motion";
 import { ArrowRightIcon, DoorClosedIcon, DoorOpenIcon } from "lucide-react";
 import { authOptions } from "~/pages/api/auth/[...nextauth]";
 import Link from "next/link";
@@ -12,7 +17,7 @@ import lexend from "../fonts";
 
 import { Button } from "@/components/ui/button";
 import AccountView from "./components/AccountView";
-import Logo3 from "./components/Logo3";
+import Logo4 from "./components/Logo4";
 import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
 import { useEffect, useState } from "react";
@@ -22,6 +27,17 @@ import { getServerSession } from "next-auth";
 
 const approxDiamondAnimLength = 2;
 
+const logoDelay = approxDiamondAnimLength + 1;
+const lettersDelay = logoDelay + 0.2;
+const descriptionDelay = lettersDelay + 1;
+const signInDelay = descriptionDelay + 1;
+const footerDelay = signInDelay + 2;
+
+const numDiamonds = 11;
+const initialScale = 0.01;
+const finalScale = 1;
+const restDelta = 0.001;
+
 export default function Home({
   providers,
   sessionData,
@@ -29,29 +45,20 @@ export default function Home({
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [signOutHovered, setSignOutHovered] = useState(false);
 
-  const diamondAnimation: AnimationProps = {
-    initial: {
-      opacity: 0,
-      scale: sessionData ? 1.4 : 0.5,
-      rotate: 45,
-    },
-    animate: {
-      opacity: 1,
-      scale: sessionData ? 1.4 : 1,
-      rotate: 45,
-      transition: { type: "spring", damping: 50, stiffness: 80 },
-    },
-  };
-
   const arrowsAnimation: AnimationProps = {
     initial: {
       opacity: 0,
-      scale: sessionData ? 1 : 0.85,
+      scale: sessionData ? 1 : 0.65,
     },
     animate: {
       opacity: 1,
       scale: 1,
-      transition: { type: "spring", damping: 50, stiffness: 80 },
+      transition: {
+        type: "spring",
+        damping: 3,
+        stiffness: 2,
+        restDelta: restDelta,
+      },
     },
   };
 
@@ -62,7 +69,13 @@ export default function Home({
     animate: {
       opacity: 1,
       scale: 1,
-      transition: { type: "spring", damping: 50, stiffness: 80 },
+      transition: {
+        type: "spring",
+        damping: 50,
+        stiffness: 80,
+        restDelta: restDelta,
+        delay: footerDelay,
+      },
     },
   };
 
@@ -85,9 +98,59 @@ export default function Home({
           <StarArrows className="fill-border stroke-border" />
         </motion.div>
         <motion.div
-          {...diamondAnimation}
-          className="rounded-xs fixed h-[450px] w-[450px] origin-center rotate-45 border border-border bg-gradient-radial from-background to-background/70"
-        ></motion.div>
+          className="fixed aspect-square h-[200%] origin-center transform-gpu rounded bg-gradient-radial  from-background/95 to-background/10 will-change-transform"
+          initial={{
+            opacity: 0,
+            scale: sessionData ? finalScale : initialScale,
+            rotate: 90,
+          }}
+          animate={{
+            opacity: 1,
+            scale: finalScale,
+            transition: {
+              type: "spring",
+              damping: 5,
+              stiffness: 4,
+              restDelta: restDelta,
+            },
+          }}
+        />
+        {Array.from({ length: numDiamonds + 1 }).map((_, index) => {
+          const colors = [
+            `hsl(${360 * (index / numDiamonds)},100%, 80%)`,
+            `hsl(${180 * (index / numDiamonds)},100%, 80%)`,
+            ,
+            `hsl(${20 * (index / numDiamonds)},100%, 80%)`,
+          ];
+          const color = useColorCycle(colors, 1000 * index);
+          return (
+            <motion.div
+              initial={{
+                opacity: 0,
+                scale: sessionData
+                  ? finalScale
+                  : initialScale + (index / numDiamonds) * 0.2,
+                rotate: 90,
+                borderColor: colors[index % colors.length],
+              }}
+              animate={{
+                opacity: 1,
+                scale: finalScale,
+                rotate: index * (82.4 / numDiamonds),
+                borderColor: color,
+                transition: {
+                  type: "spring",
+                  damping: 3 + (index / numDiamonds / 2) * 5,
+                  stiffness: 2 + (index / numDiamonds) * 4,
+                  delay: 0 + (index / numDiamonds) * 2,
+                  restDelta: restDelta,
+                  borderColor: { duration: 1, loop: Infinity, ease: "linear" },
+                },
+              }}
+              className={`rounded-xs fixed aspect-square h-[100%] origin-center  transform-gpu border border-border will-change-transform`}
+            />
+          );
+        })}
         <SignIn
           providers={providers}
           sessionData={sessionData}
@@ -193,7 +256,7 @@ function SignIn({
         type: "spring",
         damping: 20,
         stiffness: 40,
-        delay: 1.3,
+        delay: logoDelay,
       },
     },
   };
@@ -202,7 +265,11 @@ function SignIn({
     initial: { opacity: sessionData ? 1 : 0 },
     animate: {
       opacity: 1,
-      transition: { type: "spring", damping: 40, stiffness: 150 },
+      transition: {
+        type: "spring",
+        damping: 40,
+        stiffness: 150,
+      },
     },
   };
 
@@ -217,7 +284,7 @@ function SignIn({
           type: "spring",
           damping: 50,
           stiffness: 50,
-          delayChildren: 1,
+          delayChildren: lettersDelay,
           staggerChildren: 0.05,
         },
       },
@@ -230,21 +297,21 @@ function SignIn({
       opacity: 1,
       y: 0,
       transition: {
-        delay: approxDiamondAnimLength,
         type: "spring",
         damping: 20,
         stiffness: 100,
+        delay: descriptionDelay,
       },
     },
   };
 
   const signInAnimation: AnimationProps = {
-    initial: { opacity: 0.001, y: sessionData ? 0 : -10 },
+    initial: { opacity: 0.01, y: sessionData ? 0 : -10 },
     animate: {
       opacity: 1,
       y: 0,
       transition: {
-        delay: sessionData ? 0 : approxDiamondAnimLength + 0.3,
+        delay: sessionData ? 0 : signInDelay + 0.3,
         type: "spring",
         damping: 40,
         stiffness: 150,
@@ -260,7 +327,7 @@ function SignIn({
             {...logoAnimation}
             className="flex items-center justify-center align-middle"
           >
-            <Logo3 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
+            <Logo4 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
           </motion.div>
           <div className="space-y-1 text-center">
             <motion.div
@@ -360,4 +427,20 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       userData,
     },
   };
+}
+
+function useColorCycle(colors, delay = 50) {
+  const [colorIndex, setColorIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setColorIndex((prevColorIndex) => (prevColorIndex + 1) % colors.length);
+    }, delay);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [colors, delay]);
+
+  return colors[colorIndex];
 }
