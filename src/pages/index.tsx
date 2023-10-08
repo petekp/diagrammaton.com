@@ -25,18 +25,41 @@ import { useTheme } from "next-themes";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
-const approxDiamondAnimLength = 2;
+// Speed
+const diamondDelay = 1.2;
+const diamondDamping = 30;
+const diamondStiffness = 90;
 
-const logoDelay = approxDiamondAnimLength + 1;
-const lettersDelay = logoDelay + 0.2;
-const descriptionDelay = lettersDelay + 1;
-const signInDelay = descriptionDelay + 1;
-const footerDelay = signInDelay + 2;
+// Timings
+const approxDiamondAnimLength = diamondDelay * 0.5;
 
+const arrowsDelay = 0;
+const arrowsDamping = 50;
+const arrowsStiffness = 90;
+
+// Diamonds
 const numDiamonds = 11;
 const initialScale = 0.01;
 const finalScale = 1;
 const restDelta = 0.001;
+
+const logoDelay = 0;
+const logoDamping = 20;
+const logoStiffness = 60;
+
+const lettersDelay = logoDelay + 0.2;
+const letterDamping = 2;
+const letterStiffness = 5;
+
+const descriptionDelay = lettersDelay + 2;
+const descriptionDamping = 20;
+const descriptionStiffness = 60;
+
+const signInDelay = descriptionDelay + 0.4;
+const signInDamping = 20;
+const signInStiffness = 60;
+
+const footerDelay = signInDelay + 2;
 
 export default function Home({
   providers,
@@ -55,9 +78,10 @@ export default function Home({
       scale: 1,
       transition: {
         type: "spring",
-        damping: 3,
-        stiffness: 2,
+        damping: arrowsDamping,
+        stiffness: arrowsStiffness,
         restDelta: restDelta,
+        delay: arrowsDelay,
       },
     },
   };
@@ -71,8 +95,8 @@ export default function Home({
       scale: 1,
       transition: {
         type: "spring",
-        damping: 50,
-        stiffness: 80,
+        damping: diamondDamping,
+        stiffness: diamondStiffness,
         restDelta: restDelta,
         delay: footerDelay,
       },
@@ -97,57 +121,37 @@ export default function Home({
         >
           <StarArrows className="fill-border stroke-border" />
         </motion.div>
-        <motion.div
-          className="fixed aspect-square h-[200%] origin-center transform-gpu rounded bg-gradient-radial  from-background/95 to-background/10 will-change-transform"
-          initial={{
-            opacity: 0,
-            scale: sessionData ? finalScale : initialScale,
-            rotate: 90,
-          }}
-          animate={{
-            opacity: 1,
-            scale: finalScale,
-            transition: {
-              type: "spring",
-              damping: 5,
-              stiffness: 4,
-              restDelta: restDelta,
-            },
-          }}
-        />
+        <motion.div className="fixed aspect-square h-[200%] origin-center transform-gpu rounded border  border-red-300 bg-gradient-radial from-background/95 to-background/10 will-change-transform" />
         {Array.from({ length: numDiamonds + 1 }).map((_, index) => {
-          const colors = [
-            `hsl(${360 * (index / numDiamonds)},100%, 80%)`,
-            `hsl(${180 * (index / numDiamonds)},100%, 80%)`,
-            ,
-            `hsl(${20 * (index / numDiamonds)},100%, 80%)`,
-          ];
-          const color = useColorCycle(colors, 1000 * index);
+          const borderColor = `hsl(${360 * (index / numDiamonds)}, 100%, 80%)`;
           return (
             <motion.div
+              key={index}
               initial={{
                 opacity: 0,
                 scale: sessionData
                   ? finalScale
                   : initialScale + (index / numDiamonds) * 0.2,
                 rotate: 90,
-                borderColor: colors[index % colors.length],
               }}
               animate={{
                 opacity: 1,
+                borderColor: `hsl(${360 * (index / numDiamonds)}, 100%, 80%)`,
                 scale: finalScale,
                 rotate: index * (82.4 / numDiamonds),
-                borderColor: color,
                 transition: {
                   type: "spring",
-                  damping: 3 + (index / numDiamonds / 2) * 5,
-                  stiffness: 2 + (index / numDiamonds) * 4,
-                  delay: 0 + (index / numDiamonds) * 2,
+                  damping:
+                    diamondDamping +
+                    (index / numDiamonds / 2) * (diamondDamping + 2),
+                  stiffness:
+                    diamondStiffness +
+                    (index / numDiamonds) * (diamondStiffness + 2),
+                  delay: 0 + (index / numDiamonds) * diamondDelay,
                   restDelta: restDelta,
-                  borderColor: { duration: 1, loop: Infinity, ease: "linear" },
                 },
               }}
-              className={`rounded-xs fixed aspect-square h-[100%] origin-center  transform-gpu border border-border will-change-transform`}
+              className={`rounded-xs fixed aspect-square w-[130vw] min-w-[500px] max-w-[600px] origin-center rounded-md border-2  will-change-transform sm:max-h-[800px] sm:w-[100vw] sm:max-w-[800px]`}
             />
           );
         })}
@@ -221,6 +225,78 @@ function SignIn({
 
   const { resolvedTheme } = useTheme();
 
+  const staggerAnimation: AnimationProps = {
+    initial: "hidden",
+    animate: "visible",
+    variants: {
+      hidden: { opacity: sessionData ? 1 : 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          type: "spring",
+          damping: 50,
+          stiffness: 50,
+          delayChildren: 1,
+          staggerChildren: 0.05,
+        },
+      },
+    },
+  };
+
+  const logoVariants = {
+    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: logoDamping,
+        stiffness: logoStiffness,
+        delay: logoDelay,
+        restDelta: restDelta,
+      },
+    },
+  };
+
+  const letterAnimation: AnimationProps = {
+    initial: { opacity: sessionData ? 1 : 0 },
+    animate: {
+      opacity: 1,
+      transition: { type: "spring", damping: 40, stiffness: 150 },
+    },
+  };
+
+  const descriptionVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: descriptionDamping,
+        stiffness: descriptionStiffness,
+        delay: descriptionDelay,
+        restDelta: restDelta,
+      },
+    },
+  };
+
+  const signInVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        damping: signInDamping,
+        stiffness: signInStiffness,
+        delay: signInDelay,
+        restDelta: restDelta,
+      },
+    },
+  };
+
   useEffect(() => {
     const toggleEyeHeight = () => {
       setEyeHeight(0); // Close the eye
@@ -242,89 +318,14 @@ function SignIn({
     };
   }, []);
 
-  const logoAnimation: AnimationProps = {
-    initial: {
-      opacity: sessionData ? 1 : 0,
-      scale: sessionData ? 1 : 0.9,
-      y: sessionData ? 0 : 10,
-    },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: 20,
-        stiffness: 40,
-        delay: logoDelay,
-      },
-    },
-  };
-
-  const letterAnimation: AnimationProps = {
-    initial: { opacity: sessionData ? 1 : 0 },
-    animate: {
-      opacity: 1,
-      transition: {
-        type: "spring",
-        damping: 40,
-        stiffness: 150,
-      },
-    },
-  };
-
-  const staggerAnimation: AnimationProps = {
-    initial: "hidden",
-    animate: "visible",
-    variants: {
-      hidden: { opacity: sessionData ? 1 : 0 },
-      visible: {
-        opacity: 1,
-        transition: {
-          type: "spring",
-          damping: 50,
-          stiffness: 50,
-          delayChildren: lettersDelay,
-          staggerChildren: 0.05,
-        },
-      },
-    },
-  };
-
-  const descriptionAnimation: AnimationProps = {
-    initial: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -15 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: 20,
-        stiffness: 100,
-        delay: descriptionDelay,
-      },
-    },
-  };
-
-  const signInAnimation: AnimationProps = {
-    initial: { opacity: 0.01, y: sessionData ? 0 : -10 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: sessionData ? 0 : signInDelay + 0.3,
-        type: "spring",
-        damping: 40,
-        stiffness: 150,
-      },
-    },
-  };
-
   return (
-    <div className="relative flex flex-col items-center justify-center pt-3">
+    <motion.div className="relative flex flex-col items-center justify-center pt-3">
       <div className="flex flex-col items-center justify-center space-y-10">
         <div className="select-none space-y-8">
           <motion.div
-            {...logoAnimation}
+            variants={logoVariants}
+            initial="hidden"
+            animate="visible"
             className="flex items-center justify-center align-middle"
           >
             <Logo4 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
@@ -344,22 +345,32 @@ function SignIn({
                 </motion.span>
               ))}
             </motion.div>
-
             <motion.p
-              {...descriptionAnimation}
-              className="text tracking-wide text-muted"
+              variants={descriptionVariants}
+              initial="hidden"
+              animate="visible"
+              className="text tracking-wide text-center text-muted"
             >
               AI powered diagrams for FigJam
             </motion.p>
           </div>
         </div>
         {sessionData && (
-          <motion.div {...signInAnimation}>
+          <motion.div
+            variants={signInVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <AccountView userData={userData} />
           </motion.div>
         )}
         {!sessionData && (
-          <motion.div {...signInAnimation} className="flex flex-col gap-2">
+          <motion.div
+            variants={signInVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col gap-2"
+          >
             {Object.values(providers).map((provider) => (
               <motion.div layout key={provider.name}>
                 <Button
@@ -383,7 +394,7 @@ function SignIn({
           </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -427,20 +438,4 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
       userData,
     },
   };
-}
-
-function useColorCycle(colors, delay = 50) {
-  const [colorIndex, setColorIndex] = useState(0);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setColorIndex((prevColorIndex) => (prevColorIndex + 1) % colors.length);
-    }, delay);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [colors, delay]);
-
-  return colors[colorIndex];
 }
