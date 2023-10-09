@@ -8,17 +8,18 @@ export default function Logo3({
   eyeHeight: number;
   darkMode: boolean;
 }) {
-  const svgHeight = 781;
+  const svgHeight = 143;
   const maskHeight = useMotionValue(eyeHeight);
   const maskY = useMotionValue((svgHeight - eyeHeight) / 2);
 
   const gradient = "translate(1 120) rotate(0) scale(300)";
+  const gradient2 = "translate(0 -20) rotate(0) scale(200)";
 
   useEffect(() => {
     const controls = animate(maskHeight, eyeHeight, {
       type: "spring",
-      stiffness: 300,
-      damping: 30,
+      stiffness: 120,
+      damping: 20,
       onUpdate: (value) => {
         maskY.set((svgHeight - value) / 2);
       },
@@ -31,41 +32,57 @@ export default function Logo3({
     <svg
       width="80"
       height="80"
-      viewBox="0 0 150 151"
+      viewBox="0 0 143 143"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M35 31C32.7909 31 31 32.7909 31 35V117C31 119.209 32.7909 121 35 121H117C119.209 121 121 119.209 121 117V35C121 32.7909 119.209 31 117 31H35ZM28 21C24.134 21 21 24.134 21 28V124C21 127.866 24.134 131 28 131H124C127.866 131 131 127.866 131 124V28C131 24.134 127.866 21 124 21H28Z"
-        fill="url(#paint0_angular_137_624)"
+        d="M111.154 26.3721H33.1543C29.8406 26.3721 27.1543 29.0584 27.1543 32.3721V110.372C27.1543 113.686 29.8406 116.372 33.1543 116.372H111.154C114.468 116.372 117.154 113.686 117.154 110.372V32.3721C117.154 29.0584 114.468 26.3721 111.154 26.3721ZM33.1543 16.3721C24.3177 16.3721 17.1543 23.5355 17.1543 32.3721V110.372C17.1543 119.209 24.3177 126.372 33.1543 126.372H111.154C119.991 126.372 127.154 119.209 127.154 110.372V32.3721C127.154 23.5355 119.991 16.3721 111.154 16.3721H33.1543Z"
+        fill="url(#paint0_angular_162_673)"
       />
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M74.9999 12.1425L11.3603 75.7821L74.9999 139.422L138.639 75.7821L74.9999 12.1425ZM79.9496 2.95012C77.216 0.216448 72.7838 0.216448 70.0501 2.95012L2.16789 70.8324C-0.565779 73.566 -0.565782 77.9982 2.16789 80.7319L70.0501 148.614C72.7838 151.348 77.216 151.348 79.9496 148.614L147.832 80.7319C150.566 77.9982 150.566 73.566 147.832 70.8324L79.9496 2.95012Z"
-        fill="url(#paint1_angular_137_624)"
+        d="M130.551 66.9117L75.397 11.7574C73.0538 9.41421 69.2548 9.41421 66.9117 11.7574L11.7574 66.9117C9.41421 69.2548 9.41421 73.0538 11.7574 75.397L66.9117 130.551C69.2548 132.894 73.0538 132.894 75.397 130.551L130.551 75.397C132.894 73.0538 132.894 69.2548 130.551 66.9117ZM82.468 4.68629C76.2196 -1.5621 66.089 -1.5621 59.8406 4.68629L4.68629 59.8406C-1.5621 66.089 -1.5621 76.2196 4.68629 82.468L59.8406 137.622C66.089 143.871 76.2196 143.871 82.468 137.622L137.622 82.468C143.871 76.2196 143.871 66.089 137.622 59.8406L82.468 4.68629Z"
+        fill="url(#paint1_angular_162_673)"
       />
-      <g filter="url(#filter0_ii_137_624)">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M36.1543 16.3721H64.6543V26.3721H36.1543V16.3721ZM117.155 63.873V37.373H127.155V63.873H117.155ZM17.1548 105.873V77.873H27.1548V105.873H17.1548ZM77.1543 116.372H105.654V126.372H77.1543V116.372Z"
+        fill="url(#paint2_angular_162_673)"
+      />
+      <motion.mask
+        id="mask0_162_673"
+        style={{ maskType: "alpha" }}
+        maskUnits="userSpaceOnUse"
+        x="28"
+        y={maskY}
+        width="89"
+        height={maskHeight}
+      >
         <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          d="M75.4441 99.4977C88.2515 99.4977 98.6339 89.1153 98.6339 76.3079C98.6339 71.3042 97.0491 66.6706 94.3541 62.8817C95.1171 65.9894 94.2107 69.5431 92.4355 71.3183C89.9058 73.848 85.1672 73.2109 81.8515 69.8952C78.5359 66.5795 77.8987 61.8409 80.4284 59.3112C82.203 57.5367 85.7548 56.6302 88.8618 57.3918C85.0745 54.7005 80.4441 53.1182 75.4441 53.1182C62.6368 53.1182 52.2544 63.5006 52.2544 76.3079C52.2544 89.1153 62.6368 99.4977 75.4441 99.4977Z"
-          fill="url(#paint2_radial_137_624)"
+          d="M28.1543 42.4563C61.4366 22.9316 80.6448 21.7674 116.154 42.4563V100.78C81.2206 120.143 61.9641 120.332 28.1543 100.78V42.4563Z"
+          fill="#D9D9D9"
         />
+      </motion.mask>
+      <g mask="url(#mask0_162_673)">
+        <g filter="url(#filter0_ii_162_673)">
+          <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M71.5984 94.8707C84.4058 94.8707 94.7882 84.4883 94.7882 71.681C94.7882 58.8736 84.4058 48.4912 71.5984 48.4912C58.7911 48.4912 48.4087 58.8736 48.4087 71.681C48.4087 84.4883 58.7911 94.8707 71.5984 94.8707ZM77.3604 65.9142C80.3957 68.9494 84.3447 69.9214 86.1809 68.0853C88.017 66.2491 88.0632 61.2819 85.028 58.2467C81.9927 55.2115 77.0256 55.2576 75.1894 57.0938C73.3532 58.93 74.3252 62.879 77.3604 65.9142Z"
+            fill="url(#paint3_radial_162_673)"
+          />
+        </g>
       </g>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M37.2463 25C37.2463 22.7909 39.0371 21 41.2463 21L71.7203 21C73.9294 21 75.7203 22.7909 75.7203 25V27C75.7203 29.2091 73.9294 31 71.7203 31L41.2463 31C39.0371 31 37.2463 29.2091 37.2463 27L37.2463 25ZM125 73.9229C122.791 73.9229 121 72.132 121 69.9229V39.4806C121 37.2715 122.791 35.4806 125 35.4806H127C129.209 35.4806 131 37.2715 131 39.4806V69.9229C131 72.132 129.209 73.9229 127 73.9229H125ZM25 117.451C22.7909 117.451 21 115.66 21 113.451L21 83.0091C21 80.7999 22.7909 79.0091 25 79.0091H27C29.2091 79.0091 31 80.7999 31 83.0091L31 113.451C31 115.66 29.2091 117.451 27 117.451H25ZM80.9505 125C80.9505 122.791 82.7414 121 84.9505 121L114.574 121C116.783 121 118.574 122.791 118.574 125V127C118.574 129.209 116.783 131 114.574 131L84.9505 131C82.7413 131 80.9505 129.209 80.9505 127L80.9505 125Z"
-        fill="url(#paint3_angular_137_624)"
-      />
       <defs>
         <filter
-          id="filter0_ii_137_624"
-          x="52.2544"
-          y="47.1182"
+          id="filter0_ii_162_673"
+          x="48.4087"
+          y="42.4912"
           width="46.3794"
           height="58.3799"
           filterUnits="userSpaceOnUse"
@@ -94,7 +111,7 @@ export default function Logo3({
           <feBlend
             mode="normal"
             in2="shape"
-            result="effect1_innerShadow_137_624"
+            result="effect1_innerShadow_162_673"
           />
           <feColorMatrix
             in="SourceAlpha"
@@ -111,12 +128,12 @@ export default function Logo3({
           />
           <feBlend
             mode="normal"
-            in2="effect1_innerShadow_137_624"
-            result="effect2_innerShadow_137_624"
+            in2="effect1_innerShadow_162_673"
+            result="effect2_innerShadow_162_673"
           />
         </filter>
         <radialGradient
-          id="paint0_angular_137_624"
+          id="paint0_angular_162_673"
           cx="0"
           cy="0"
           r="1"
@@ -124,35 +141,26 @@ export default function Logo3({
           gradientTransform={gradient}
         >
           <stop stopColor="#FF4789" />
-          <stop offset="0.333333" stopColor="#FFD748" />
-          <stop offset="0.5625" stopColor="#75F682" />
-          <stop offset="0.848958" stopColor="#FF4ACC" />
+          <stop offset="0.260417" stopColor="#FFD748" />
+          <stop offset="0.5625" stopColor="#75F6D7" />
+          <stop offset="0.828125" stopColor="#FF4ACC" />
         </radialGradient>
         <radialGradient
-          id="paint1_angular_137_624"
+          id="paint1_angular_162_673"
           cx="0"
           cy="0"
           r="1"
           gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(0.4271 20.7821) rotate(0) scale(300.105)"
+          gradientTransform={gradient2}
         >
-          <stop offset="0.0375323" stopColor="#8F00FF" />
-          <stop offset="0.328125" stopColor="#32D8FF" />
-          <stop offset="0.6875" stopColor="#6A67FF" />
+          <stop offset="0.0375323" stopColor="#217AFF" />
+          <stop offset="0.213542" stopColor="#02C7D3" />
+          <stop offset="0.380208" stopColor="#22DCE8" />
+          <stop offset="0.536458" stopColor="#4E88F2" />
+          <stop offset="0.723958" stopColor="#5F45FF" />
         </radialGradient>
         <radialGradient
-          id="paint2_radial_137_624"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(58.779 92.6561) rotate(-45) scale(47.2046)"
-        >
-          <stop stopColor="#EEBDFF" stopOpacity="0.18" />
-          <stop offset="1" stopColor="#0500FF" />
-        </radialGradient>
-        <radialGradient
-          id="paint3_angular_137_624"
+          id="paint2_angular_162_673"
           cx="0"
           cy="0"
           r="1"
@@ -160,9 +168,21 @@ export default function Logo3({
           gradientTransform={gradient}
         >
           <stop stopColor="#FF4789" />
-          <stop offset="0.333333" stopColor="#FFD748" />
-          <stop offset="0.5625" stopColor="#75F682" />
-          <stop offset="0.848958" stopColor="#FF4ACC" />
+          <stop offset="0.260417" stopColor="#FFD748" />
+          <stop offset="0.5625" stopColor="#75F6D7" />
+          <stop offset="0.828125" stopColor="#FF4ACC" />
+        </radialGradient>
+        <radialGradient
+          id="paint3_radial_162_673"
+          cx="0"
+          cy="0"
+          r="1"
+          gradientUnits="userSpaceOnUse"
+          gradientTransform="translate(54.9333 88.0291) rotate(-45) scale(47.2046)"
+        >
+          <stop stopColor="#EBFFE1" />
+          <stop offset="0.369792" stopColor="#88B2F0" />
+          <stop offset="1" stopColor="#1400FF" />
         </radialGradient>
       </defs>
     </svg>

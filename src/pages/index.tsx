@@ -4,6 +4,7 @@ import {
   type AnimationProps,
   useCycle,
   useAnimation,
+  useWillChange,
 } from "framer-motion";
 import { ArrowRightIcon, DoorClosedIcon, DoorOpenIcon } from "lucide-react";
 import { authOptions } from "~/pages/api/auth/[...nextauth]";
@@ -20,38 +21,33 @@ import AccountView from "./components/AccountView";
 import Logo4 from "./components/Logo4";
 import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
-// Speed
-const diamondDelay = 1.2;
-const diamondDamping = 30;
-const diamondStiffness = 90;
+const restDelta = 0.005;
+const DIAMONDS_NUM = 30;
 
-// Timings
-const approxDiamondAnimLength = diamondDelay * 0.5;
-
-const arrowsDelay = 0;
-const arrowsDamping = 50;
+const arrowsDelay = 0.4;
+const arrowsDamping = 30;
 const arrowsStiffness = 90;
 
-// Diamonds
-const numDiamonds = 11;
-const initialScale = 0.01;
-const finalScale = 1;
-const restDelta = 0.001;
+const diamondDelay = arrowsDelay + 0.2;
+const diamondDamping = 24;
+const diamondStiffness = 200;
 
-const logoDelay = 0;
-const logoDamping = 20;
-const logoStiffness = 60;
+const logoDelay = diamondDelay + 0.13;
+const logoDamping = 13;
+const logoStiffness = 110;
 
-const lettersDelay = logoDelay + 0.2;
-const letterDamping = 2;
-const letterStiffness = 5;
+const containerDelay = logoDelay + 2.4;
+const containerDamping = 40;
+const containerStiffness = 160;
 
-const descriptionDelay = lettersDelay + 2;
+const lettersDelay = containerDelay + 0.3;
+
+const descriptionDelay = lettersDelay + 1;
 const descriptionDamping = 20;
 const descriptionStiffness = 60;
 
@@ -71,7 +67,7 @@ export default function Home({
   const arrowsAnimation: AnimationProps = {
     initial: {
       opacity: 0,
-      scale: sessionData ? 1 : 0.65,
+      scale: sessionData ? 1 : 0.2,
     },
     animate: {
       opacity: 1,
@@ -103,6 +99,68 @@ export default function Home({
     },
   };
 
+  const diamondPath = "M50 0 L100 50 L50 100 L0 50 Z";
+
+  const getScaleFactor = (index: number, total: number) => {
+    return Math.log(index / total + 1.3);
+  };
+
+  function Diamond({
+    index,
+    total,
+    hue,
+  }: {
+    index: number;
+    total: number;
+    hue: number;
+  }) {
+    const initial = { opacity: 0, scale: 1, rotate: 0 };
+    const scaleFactor = getScaleFactor(index, total);
+    const color = `hsl(${hue}, var(--color-saturation), var(--color-lightness))`;
+
+    const animate = {
+      opacity: 1,
+      scale: scaleFactor,
+      rotate: index * (93.12 / total),
+      transition: {
+        type: "spring",
+        damping: diamondDamping + (index / total / 2) * (diamondDamping + 10),
+        stiffness: diamondStiffness + (index / total) * (diamondDamping + 10),
+        delay: diamondDelay + (index / total) * 1.4,
+        restDelta: 0.001,
+      },
+    };
+
+    return (
+      <motion.path
+        d={diamondPath}
+        stroke={color}
+        strokeLinecap={"round"}
+        strokeWidth={0.14}
+        fill="transparent"
+        initial={initial}
+        animate={animate}
+      />
+    );
+  }
+
+  function DiamondAnimation({ numDiamonds }: { numDiamonds: number }) {
+    return (
+      <motion.svg
+        viewBox="0 0 100 100"
+        className="fixed z-0 aspect-square h-[120vh]  min-h-[800px] min-w-[500px] origin-center"
+      >
+        {Array.from({ length: numDiamonds }).map((_, index) => {
+          const hue = (360 * index) / numDiamonds;
+
+          return (
+            <Diamond key={index} index={index} total={numDiamonds} hue={hue} />
+          );
+        })}
+      </motion.svg>
+    );
+  }
+
   return (
     <>
       <Head>
@@ -117,44 +175,14 @@ export default function Home({
       <main className="flex min-h-[100dvh] min-w-[100dvw] flex-col items-center justify-center bg-background">
         <motion.div
           {...arrowsAnimation}
-          className="fixed flex min-h-[100dvh] min-w-[100dvw] items-center justify-center"
+          className="fixed flex min-h-[100dvh] min-w-[100svw]  items-center justify-center"
         >
           <StarArrows className="fill-border stroke-border" />
         </motion.div>
-        <motion.div className="fixed aspect-square h-[200%] origin-center transform-gpu rounded border  border-red-300 bg-gradient-radial from-background/95 to-background/10 will-change-transform" />
-        {Array.from({ length: numDiamonds + 1 }).map((_, index) => {
-          const borderColor = `hsl(${360 * (index / numDiamonds)}, 100%, 80%)`;
-          return (
-            <motion.div
-              key={index}
-              initial={{
-                opacity: 0,
-                scale: sessionData
-                  ? finalScale
-                  : initialScale + (index / numDiamonds) * 0.2,
-                rotate: 90,
-              }}
-              animate={{
-                opacity: 1,
-                borderColor: `hsl(${360 * (index / numDiamonds)}, 100%, 80%)`,
-                scale: finalScale,
-                rotate: index * (82.4 / numDiamonds),
-                transition: {
-                  type: "spring",
-                  damping:
-                    diamondDamping +
-                    (index / numDiamonds / 2) * (diamondDamping + 2),
-                  stiffness:
-                    diamondStiffness +
-                    (index / numDiamonds) * (diamondStiffness + 2),
-                  delay: 0 + (index / numDiamonds) * diamondDelay,
-                  restDelta: restDelta,
-                },
-              }}
-              className={`rounded-xs fixed aspect-square w-[130vw] min-w-[500px] max-w-[600px] origin-center rounded-md border-2  will-change-transform sm:max-h-[800px] sm:w-[100vw] sm:max-w-[800px]`}
-            />
-          );
-        })}
+        <motion.div className="fixed aspect-square h-[200%] origin-center   rounded  bg-gradient-radial from-background/95 to-background/10 " />
+
+        <DiamondAnimation numDiamonds={DIAMONDS_NUM} />
+
         <SignIn
           providers={providers}
           sessionData={sessionData}
@@ -166,7 +194,7 @@ export default function Home({
       </div>
       <motion.div
         {...footerAnimation}
-        className="fixed bottom-0 left-0 flex w-full flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-0 py-5 sm:flex-row sm:justify-between sm:space-y-0 sm:px-10"
+        className="fixed bottom-0 left-0 flex w-full  flex-col justify-center space-y-2 bg-gradient-to-t from-background to-transparent px-0 py-5 sm:flex-row sm:justify-between sm:space-y-0 sm:px-10"
       >
         <div className="flex items-center justify-center">
           {sessionData ? (
@@ -193,14 +221,14 @@ export default function Home({
           ) : null}
         </div>
         <div className="flex justify-center gap-1 text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()}</p>
+          <p>&copy; {new Date().getFullYear()} Peter Petrash</p>
           <span className="text-muted-foreground/40">•</span>
           <Link
             href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
             target="_blank"
             className="underline underline-offset-4 hover:text-foreground"
           >
-            Terms of Service
+            Terms
           </Link>{" "}
           <span className="text-muted-foreground/40">•</span>
           <Link
@@ -208,7 +236,7 @@ export default function Home({
             target="_blank"
             className="underline underline-offset-4 hover:text-foreground"
           >
-            Privacy Policy
+            Privacy
           </Link>
         </div>
       </motion.div>
@@ -221,22 +249,40 @@ function SignIn({
   sessionData,
   userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-  const [eyeHeight, setEyeHeight] = useState(300);
+  const [eyeHeight, setEyeHeight] = useState(500);
 
   const { resolvedTheme } = useTheme();
+
+  const containerAnimation: AnimationProps = {
+    initial: "centered",
+    animate: "raised",
+    variants: {
+      centered: { y: 80 },
+      raised: {
+        y: -20,
+        transition: {
+          type: "spring",
+          damping: containerDamping,
+          stiffness: containerStiffness,
+          delay: containerDelay,
+        },
+      },
+    },
+  };
 
   const staggerAnimation: AnimationProps = {
     initial: "hidden",
     animate: "visible",
     variants: {
-      hidden: { opacity: sessionData ? 1 : 0 },
+      hidden: { opacity: sessionData ? 1 : 0, y: 20 },
       visible: {
         opacity: 1,
+        y: 0,
         transition: {
           type: "spring",
           damping: 50,
           stiffness: 50,
-          delayChildren: 1,
+          delayChildren: lettersDelay,
           staggerChildren: 0.05,
         },
       },
@@ -244,7 +290,7 @@ function SignIn({
   };
 
   const logoVariants = {
-    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    hidden: { opacity: 0, scale: 1.6, y: 0 },
     visible: {
       opacity: 1,
       scale: 1,
@@ -263,7 +309,7 @@ function SignIn({
     initial: { opacity: sessionData ? 1 : 0 },
     animate: {
       opacity: 1,
-      transition: { type: "spring", damping: 40, stiffness: 150 },
+      transition: { type: "spring", damping: 30, stiffness: 170 },
     },
   };
 
@@ -299,41 +345,44 @@ function SignIn({
 
   useEffect(() => {
     const toggleEyeHeight = () => {
-      setEyeHeight(0); // Close the eye
-      void new Promise((resolve) => setTimeout(resolve, 200)).then(() => {
-        setEyeHeight(300); // Open the eye after 200ms
+      setEyeHeight(0);
+      void new Promise((resolve) => setTimeout(resolve, 300)).then(() => {
+        setEyeHeight(50);
       });
     };
 
-    // Call once immediately
     toggleEyeHeight();
 
     const intervalId = setInterval(() => {
       void toggleEyeHeight();
-    }, Math.random() * 2000 + 3000); // Random interval between 1-3 seconds
+    }, Math.random() * 2000 + 5000);
 
-    // Clean up interval on unmount
     return () => {
       clearInterval(intervalId);
     };
   }, []);
 
   return (
-    <motion.div className="relative flex flex-col items-center justify-center pt-3">
+    <motion.div
+      {...containerAnimation}
+      initial="centered"
+      animate="raised"
+      className="relative flex  flex-col items-center justify-center pt-3"
+    >
       <div className="flex flex-col items-center justify-center space-y-10">
         <div className="select-none space-y-8">
           <motion.div
             variants={logoVariants}
             initial="hidden"
             animate="visible"
-            className="flex items-center justify-center align-middle"
+            className="flex  items-center justify-center align-middle"
           >
             <Logo4 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
           </motion.div>
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className={`text text-2xl uppercase tracking-widest text-foreground sm:text-3xl ${lexend.className}`}
+              className={`text text-2xl uppercase tracking-widest text-foreground sm:text-3xl ${lexend.className} `}
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span
@@ -349,7 +398,7 @@ function SignIn({
               variants={descriptionVariants}
               initial="hidden"
               animate="visible"
-              className="text tracking-wide text-center text-muted"
+              className="text tracking-wide  text-center text-muted"
             >
               AI powered diagrams for FigJam
             </motion.p>
@@ -369,7 +418,7 @@ function SignIn({
             variants={signInVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-col gap-2"
+            className="flex  flex-col gap-2"
           >
             {Object.values(providers).map((provider) => (
               <motion.div layout key={provider.name}>

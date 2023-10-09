@@ -9,6 +9,8 @@
 
 @layer base {
   :root {
+    --color-saturation: 100%;
+    --color-lightness: 82.5%;
     --background: 0 0% 100%;
     --foreground: 266 50% 15%;
 
@@ -44,6 +46,8 @@
   }
 
   .dark {
+    --color-saturation: 75%;
+    --color-lightness: 18%;
     --background: 266 60% 4%;
     --foreground: 266 70% 96%;
 
