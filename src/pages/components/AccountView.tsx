@@ -270,8 +270,7 @@ export default function AccountView({
     },
   };
 
-  const hasLicenseKey =
-    userData?.licenseKey || licenseKeyQuery.data || animatedLicenseKey;
+  const hasLicenseKey = userData?.licenseKey || licenseKeyQuery.data;
 
   const licenseKeyField = (
     <Controller
@@ -314,29 +313,31 @@ export default function AccountView({
                           ))}
                         </AnimatePresence>
                       </p>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            className="h-7"
-                            variant="link"
-                            disabled={licenseKeyFieldIsLoading}
-                            onClick={(e) => void onSubmitLicenseKey(e)}
-                          >
-                            <RefreshCcw
-                              size={16}
-                              className={`border-3 ${
-                                generateLicenseKey.isLoading
-                                  ? "animate-spin"
-                                  : ""
-                              } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
-                            />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Regenerate key</TooltipContent>
-                      </Tooltip>
+                      {hasLicenseKey && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              className="h-7"
+                              variant="link"
+                              disabled={licenseKeyFieldIsLoading}
+                              onClick={(e) => void onSubmitLicenseKey(e)}
+                            >
+                              <RefreshCcw
+                                size={16}
+                                className={`border-3 ${
+                                  generateLicenseKey.isLoading
+                                    ? "animate-spin"
+                                    : ""
+                                } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
+                              />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Regenerate key</TooltipContent>
+                        </Tooltip>
+                      )}
                     </>
                   ) : (
-                    <p className="font-mono text-xl text-gray-400">
+                    <p className="cursor-default select-none font-mono text-xl text-gray-400">
                       API key required
                     </p>
                   )}

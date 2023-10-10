@@ -17,9 +17,9 @@ export default function Logo3({
 
   useEffect(() => {
     const controls = animate(maskHeight, eyeHeight, {
-      type: "spring",
-      stiffness: 120,
-      damping: 20,
+      type: "tween",
+      duration: 0.3,
+      ease: "anticipate",
       onUpdate: (value) => {
         maskY.set((svgHeight - value) / 2);
       },

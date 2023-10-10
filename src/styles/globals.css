@@ -11,6 +11,7 @@
   :root {
     --color-saturation: 100%;
     --color-lightness: 82.5%;
+
     --background: 0 0% 100%;
     --foreground: 266 50% 15%;
 
@@ -20,7 +21,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --border: 266 40% 80%;
+    --border: 266 40% 75%;
     --input: 266 32% 86%;
 
     --card: 0 0% 100%;
@@ -48,6 +49,7 @@
   .dark {
     --color-saturation: 75%;
     --color-lightness: 18%;
+    
     --background: 266 60% 4%;
     --foreground: 266 70% 96%;
 

@@ -1,11 +1,5 @@
 import Head from "next/head";
-import {
-  motion,
-  type AnimationProps,
-  useCycle,
-  useAnimation,
-  useWillChange,
-} from "framer-motion";
+import { motion, type AnimationProps } from "framer-motion";
 import { ArrowRightIcon, DoorClosedIcon, DoorOpenIcon } from "lucide-react";
 import { authOptions } from "~/pages/api/auth/[...nextauth]";
 import Link from "next/link";
@@ -21,7 +15,7 @@ import AccountView from "./components/AccountView";
 import Logo4 from "./components/Logo4";
 import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -29,11 +23,11 @@ import { getServerSession } from "next-auth";
 const restDelta = 0.005;
 const DIAMONDS_NUM = 30;
 
-const arrowsDelay = 0.4;
+const arrowsDelay = 0.5;
 const arrowsDamping = 30;
 const arrowsStiffness = 90;
 
-const diamondDelay = arrowsDelay + 0.2;
+const diamondDelay = 0.5;
 const diamondDamping = 24;
 const diamondStiffness = 200;
 
@@ -114,9 +108,15 @@ export default function Home({
     total: number;
     hue: number;
   }) {
-    const initial = { opacity: 0, scale: 1, rotate: 0 };
+    const rotation = index * (93.12 / total);
     const scaleFactor = getScaleFactor(index, total);
     const color = `hsl(${hue}, var(--color-saturation), var(--color-lightness))`;
+
+    const initial = {
+      opacity: 0,
+      scale: sessionData ? scaleFactor : 1,
+      rotate: sessionData ? rotation : 0,
+    };
 
     const animate = {
       opacity: 1,
@@ -257,7 +257,7 @@ function SignIn({
     initial: "centered",
     animate: "raised",
     variants: {
-      centered: { y: 80 },
+      centered: { y: sessionData ? -20 : 105 },
       raised: {
         y: -20,
         transition: {
@@ -274,10 +274,9 @@ function SignIn({
     initial: "hidden",
     animate: "visible",
     variants: {
-      hidden: { opacity: sessionData ? 1 : 0, y: 20 },
+      hidden: { opacity: sessionData ? 1 : 0 },
       visible: {
         opacity: 1,
-        y: 0,
         transition: {
           type: "spring",
           damping: 50,
@@ -290,11 +289,10 @@ function SignIn({
   };
 
   const logoVariants = {
-    hidden: { opacity: 0, scale: 1.6, y: 0 },
+    hidden: { opacity: sessionData ? 1 : 0, scale: sessionData ? 1 : 1.6 },
     visible: {
       opacity: 1,
       scale: 1,
-      y: 0,
       transition: {
         type: "spring",
         damping: logoDamping,
@@ -314,7 +312,7 @@ function SignIn({
   };
 
   const descriptionVariants = {
-    hidden: { opacity: 0, y: -20 },
+    hidden: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -20 },
     visible: {
       opacity: 1,
       y: 0,
@@ -329,7 +327,7 @@ function SignIn({
   };
 
   const signInVariants = {
-    hidden: { opacity: 0, y: -20 },
+    hidden: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -20 },
     visible: {
       opacity: 1,
       y: 0,
@@ -346,7 +344,7 @@ function SignIn({
   useEffect(() => {
     const toggleEyeHeight = () => {
       setEyeHeight(0);
-      void new Promise((resolve) => setTimeout(resolve, 300)).then(() => {
+      void new Promise((resolve) => setTimeout(resolve, 280)).then(() => {
         setEyeHeight(50);
       });
     };
@@ -418,7 +416,7 @@ function SignIn({
             variants={signInVariants}
             initial="hidden"
             animate="visible"
-            className="flex  flex-col gap-2"
+            className="flex flex-col gap-2"
           >
             {Object.values(providers).map((provider) => (
               <motion.div layout key={provider.name}>
@@ -484,6 +482,12 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     props: {
       providers: providers ?? [],
       sessionData: sessionData ?? null,
+      // sessionData: {
+      //   user: {
+      //     email: "something@soemthing.com",
+      //     id: "102",
+      //   },
+      // },
       userData,
     },
   };
