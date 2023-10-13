@@ -251,7 +251,8 @@ function SignIn({
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [eyeHeight, setEyeHeight] = useState(500);
 
-  const { resolvedTheme } = useTheme();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
 
   const containerAnimation: AnimationProps = {
     initial: "centered",
@@ -343,9 +344,9 @@ function SignIn({
 
   useEffect(() => {
     const toggleEyeHeight = () => {
-      setEyeHeight(0);
-      void new Promise((resolve) => setTimeout(resolve, 280)).then(() => {
-        setEyeHeight(50);
+      setEyeHeight(1);
+      void new Promise((resolve) => setTimeout(resolve, 200)).then(() => {
+        setEyeHeight((value) => (isDarkMode ? 50 : 50));
       });
     };
 
@@ -358,7 +359,7 @@ function SignIn({
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [isDarkMode]);
 
   return (
     <motion.div
@@ -375,7 +376,7 @@ function SignIn({
             animate="visible"
             className="flex  items-center justify-center align-middle"
           >
-            <Logo4 eyeHeight={eyeHeight} darkMode={resolvedTheme === "dark"} />
+            <Logo4 eyeHeight={eyeHeight} isDarkMode={isDarkMode} />
           </motion.div>
           <div className="space-y-1 text-center">
             <motion.div

@@ -1,25 +1,28 @@
-import { animate, motion, useMotionValue } from "framer-motion";
+import { animate, motion, useAnimation, useMotionValue } from "framer-motion";
 import { useEffect } from "react";
 
 export default function Logo3({
   eyeHeight,
-  darkMode,
+  isDarkMode,
 }: {
   eyeHeight: number;
-  darkMode: boolean;
+  isDarkMode: boolean;
 }) {
   const svgHeight = 143;
   const maskHeight = useMotionValue(eyeHeight);
   const maskY = useMotionValue((svgHeight - eyeHeight) / 2);
 
-  const gradient = "translate(1 120) rotate(0) scale(300)";
-  const gradient2 = "translate(0 -20) rotate(0) scale(200)";
+  const gradient = isDarkMode
+    ? `translate(0 10) rotate(0) scale(300)`
+    : "translate(0 120) rotate(0) scale(300)";
+  const gradient2 = isDarkMode
+    ? "translate(0 200) rotate(0) scale(300)"
+    : "translate(0 -20) rotate(0) scale(200)";
 
   useEffect(() => {
     const controls = animate(maskHeight, eyeHeight, {
       type: "tween",
-      duration: 0.3,
-      ease: "anticipate",
+      duration: 0.1,
       onUpdate: (value) => {
         maskY.set((svgHeight - value) / 2);
       },
@@ -71,7 +74,7 @@ export default function Logo3({
       <g mask="url(#mask0_162_673)">
         <g filter="url(#filter0_ii_162_673)">
           <path
-            fillRule="evenodd"
+            fillRule={isDarkMode ? "inherit" : "evenodd"}
             clipRule="evenodd"
             d="M71.5984 94.8707C84.4058 94.8707 94.7882 84.4883 94.7882 71.681C94.7882 58.8736 84.4058 48.4912 71.5984 48.4912C58.7911 48.4912 48.4087 58.8736 48.4087 71.681C48.4087 84.4883 58.7911 94.8707 71.5984 94.8707ZM77.3604 65.9142C80.3957 68.9494 84.3447 69.9214 86.1809 68.0853C88.017 66.2491 88.0632 61.2819 85.028 58.2467C81.9927 55.2115 77.0256 55.2576 75.1894 57.0938C73.3532 58.93 74.3252 62.879 77.3604 65.9142Z"
             fill="url(#paint3_radial_162_673)"
@@ -178,7 +181,7 @@ export default function Logo3({
           cy="0"
           r="1"
           gradientUnits="userSpaceOnUse"
-          gradientTransform="translate(54.9333 88.0291) rotate(-45) scale(47.2046)"
+          gradientTransform="translate(54.9333 88.0291) rotate(-45) scale(40.2046)"
         >
           <stop stopColor="#EBFFE1" />
           <stop offset="0.369792" stopColor="#88B2F0" />

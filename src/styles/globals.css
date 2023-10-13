@@ -54,13 +54,13 @@
     --foreground: 266 70% 96%;
 
     --muted: 266 50% 97%;
-    --muted-foreground: 266 40% 65%;
+    --muted-foreground: 266 40% 60%;
 
     --accent: 266 70% 13%;
     --accent-foreground: 266 40% 50.1%;
 
-    --popover: 266 70% 10%;
-    --popover-foreground: 266 70% 90%;
+    --popover: 266 70% 4%;
+    --popover-foreground: 266 60% 90%;
 
     --border: 266 50% 30%;
     --input: 216 34% 17%;
