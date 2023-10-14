@@ -1,7 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerLeftUp, InfoIcon, RefreshCcw } from "lucide-react";
+import { CornerLeftUp, HelpCircle, InfoIcon, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { AnimatePresence, type AnimationProps, motion } from "framer-motion";
@@ -30,13 +30,13 @@ const apiKeyMask = "sk-•••••••••••••••••••
 const openaiApiKeySchema = z
   .string()
   .min(51, {
-    message: "Invalid OpenAI key length, please verify and try again.",
+    message: "Invalid key length, double check it and paste again.",
   })
   .max(51, {
-    message: "Invalid OpenAI key length, please verify and try again.",
+    message: "Invalid key length, double check it and paste again.",
   })
   .startsWith("sk-", {
-    message: "Invalid OpenAI key format, please verify and try again.",
+    message: "Invalid key length, double check it and paste again.",
   });
 
 const formSchema = z.object({
@@ -51,7 +51,7 @@ export default function AccountView({
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
   const [animatedLicenseKey, setAnimatedLicenseKey] = useState(
-    userData?.licenseKey || "API key required"
+    userData?.licenseKey
   );
   const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation({
@@ -109,16 +109,14 @@ export default function AccountView({
   const onSubmitApiKey = useCallback(async () => {
     const isValid = await validateApiKey.mutateAsync(apiKey);
 
-    if (isValid) {
-      console.log("valid key!");
-    } else {
+    if (!isValid) {
       setError("openaiApiKey", {
         type: "manual",
-        message: "Invalid OpenAI key, please verify and try again.",
+        message: "Hmm this key isn't working, can you verify and try again?",
       });
-      console.log("invalid key!");
       return;
     }
+
     const lastfour = await saveApiKey.mutateAsync({
       userId: session?.user?.id || "",
       apiKey,
@@ -199,14 +197,16 @@ export default function AccountView({
             </FormLabel>
             <Tooltip>
               <TooltipTrigger asChild>
-                <InfoIcon
+                <HelpCircle
                   size={16}
                   className={`border-3 ${
                     generateLicenseKey.isLoading ? "animate-spin" : ""
                   } stroke-gray-500 hover:stroke-gray-400 dark:stroke-gray-500 dark:hover:stroke-gray-400`}
                 />
               </TooltipTrigger>
-              <TooltipContent>Used to generate diagrams</TooltipContent>
+              <TooltipContent>
+                Your key is used when generating diagrams
+              </TooltipContent>
             </Tooltip>
           </div>
           <FormControl>
@@ -270,6 +270,8 @@ export default function AccountView({
     },
   };
 
+  const hasApiKey = userData?.openaiApiKey || apiKeyQuery.data;
+
   const hasLicenseKey = userData?.licenseKey || licenseKeyQuery.data;
 
   const licenseKeyField = (
@@ -295,75 +297,67 @@ export default function AccountView({
           <FormControl>
             <div className=" flex w-full flex-row gap-1">
               <div className="relative flex flex-1 flex-col gap-2">
-                <div className="flex flex-1 items-center gap-2">
-                  {animatedLicenseKey ? (
-                    <>
-                      <p
-                        className={`font-mono text-2xl ${
-                          licenseKeyFieldIsLoading
-                            ? "text-gray-400 dark:text-gray-500 "
-                            : "text-purple-600 dark:text-green-400"
-                        } `}
-                      >
-                        <AnimatePresence>
-                          {animatedLicenseKey.split("").map((char, index) => (
-                            <motion.span key={index} {...letterAnimation}>
-                              {char}
-                            </motion.span>
-                          ))}
-                        </AnimatePresence>
-                      </p>
-                      {hasLicenseKey && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              className="h-7"
-                              variant="link"
-                              disabled={licenseKeyFieldIsLoading}
-                              onClick={(e) => void onSubmitLicenseKey(e)}
-                            >
-                              <RefreshCcw
-                                size={16}
-                                className={`border-3 ${
-                                  generateLicenseKey.isLoading
-                                    ? "animate-spin"
-                                    : ""
-                                } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
-                              />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Regenerate key</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </>
-                  ) : (
-                    <p className="cursor-default select-none font-mono text-xl text-gray-400">
-                      API key required
-                    </p>
-                  )}
-                </div>
-                <AnimatePresence>
-                  {hasLicenseKey && (
-                    <motion.div
-                      {...revealAnimation}
-                      className="flex select-none items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+                <div className="flex flex-1 items-center">
+                  <>
+                    <p
+                      className={`font-mono text-2xl ${
+                        licenseKeyFieldIsLoading
+                          ? "text-gray-400 dark:text-gray-500 "
+                          : "text-purple-600 dark:text-green-400"
+                      } `}
                     >
-                      <CornerLeftUp size={14} className="mt-[-2px]" />
-                      <Button
-                        disabled={
-                          licenseKeyFieldIsLoading || !licenseKeyQuery.data
-                        }
-                        variant="secondary"
-                        type="button"
-                        className="h-6 w-12"
-                        onClick={(e) => copyLicenseKey(e)}
-                      >
-                        Copy
-                      </Button>
-                      and paste me in the plugin!
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <AnimatePresence>
+                        {animatedLicenseKey.split("").map((char, index) => (
+                          <motion.span key={index} {...letterAnimation}>
+                            {char}
+                          </motion.span>
+                        ))}
+                      </AnimatePresence>
+                    </p>
+                    {hasLicenseKey && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className="h-7"
+                            variant="link"
+                            disabled={licenseKeyFieldIsLoading}
+                            onClick={(e) => void onSubmitLicenseKey(e)}
+                          >
+                            <RefreshCcw
+                              size={16}
+                              className={`border-3 ${
+                                generateLicenseKey.isLoading
+                                  ? "animate-spin"
+                                  : ""
+                              } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Regenerate key</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </>
+                </div>
+                <motion.div
+                  {...revealAnimation}
+                  className="flex select-none items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+                >
+                  <CornerLeftUp size={14} className="mt-[-2px]" />
+                  <Button
+                    disabled={
+                      licenseKeyFieldIsLoading ||
+                      !licenseKeyQuery.data ||
+                      !hasLicenseKey
+                    }
+                    variant="secondary"
+                    type="button"
+                    className="h-6 w-12"
+                    onClick={(e) => copyLicenseKey(e)}
+                  >
+                    Copy
+                  </Button>
+                  and paste me in the plugin!
+                </motion.div>
               </div>
             </div>
           </FormControl>
@@ -391,7 +385,9 @@ export default function AccountView({
         spellCheck="false"
       >
         <motion.div>{apiKeyField}</motion.div>
-        <motion.div>{licenseKeyField}</motion.div>
+        <AnimatePresence>
+          {hasApiKey && <motion.div>{licenseKeyField}</motion.div>}
+        </AnimatePresence>
       </form>
     </Form>
   );

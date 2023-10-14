@@ -56,8 +56,6 @@ export default function Home({
   sessionData,
   userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-  const [signOutHovered, setSignOutHovered] = useState(false);
-
   const arrowsAnimation: AnimationProps = {
     initial: {
       opacity: 0,
@@ -113,14 +111,14 @@ export default function Home({
     const color = `hsl(${hue}, var(--color-saturation), var(--color-lightness))`;
 
     const initial = {
-      opacity: 0,
-      scale: sessionData ? scaleFactor : 1,
+      opacity: sessionData ? 0 : 0,
+      scale: sessionData ? scaleFactor * 1.3 : 1,
       rotate: sessionData ? rotation : 0,
     };
 
     const animate = {
-      opacity: 1,
-      scale: scaleFactor,
+      opacity: sessionData ? 0.55 : 1,
+      scale: sessionData ? scaleFactor * 1.3 : scaleFactor,
       rotate: index * (93.12 / total),
       transition: {
         type: "spring",
@@ -148,7 +146,7 @@ export default function Home({
     return (
       <motion.svg
         viewBox="0 0 100 100"
-        className="fixed z-0 aspect-square h-[120vh]  min-h-[800px] min-w-[500px] origin-center"
+        className="fixed z-0 aspect-square min-h-[800px] min-w-[500px] origin-center"
       >
         {Array.from({ length: numDiamonds }).map((_, index) => {
           const hue = (360 * index) / numDiamonds;
@@ -199,42 +197,28 @@ export default function Home({
         <div className="flex items-center justify-center">
           {sessionData ? (
             <>
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="select-none text-center text-xs text-muted-foreground">
                 {`Signed in as ${sessionData?.user.email || ""}`}
               </p>
-              <Button
-                variant="link"
-                size="sm"
-                className="h-5 gap-1 text-xs"
-                onPointerOver={() => setSignOutHovered(true)}
-                onPointerLeave={() => setSignOutHovered(false)}
-                onClick={() => void signOut()}
-              >
-                {signOutHovered ? (
-                  <DoorOpenIcon size={16} />
-                ) : (
-                  <DoorClosedIcon size={16} />
-                )}
-                Sign Out
-              </Button>
+              <SignOutButton onSignOut={() => void signOut()} />
             </>
           ) : null}
         </div>
-        <div className="flex justify-center gap-1 text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Peter Petrash</p>
-          <span className="text-muted-foreground/40">•</span>
+        <div className="flex justify-center gap-2 text-xs text-muted-foreground">
+          <p className="select-none">
+            &copy; {new Date().getFullYear()} Peter Petrash
+          </p>
           <Link
             href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
             target="_blank"
-            className="underline underline-offset-4 hover:text-foreground"
+            className="h-0 p-0 font-medium text-primary underline-offset-4 hover:underline"
           >
             Terms
           </Link>{" "}
-          <span className="text-muted-foreground/40">•</span>
           <Link
             href="https://petekp.notion.site/Privacy-Policy-d000f7c9676a4979a394070439bb0f99?pvs=4"
             target="_blank"
-            className="underline underline-offset-4 hover:text-foreground"
+            className="h-0 p-0 font-medium text-primary underline-offset-4 hover:underline"
           >
             Privacy
           </Link>
@@ -493,3 +477,25 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     },
   };
 }
+
+const SignOutButton = ({ onSignOut }: { onSignOut: () => void }) => {
+  const [signOutHovered, setSignOutHovered] = useState(false);
+
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      className="h-5 gap-1 text-xs"
+      onPointerOver={() => setSignOutHovered(true)}
+      onPointerLeave={() => setSignOutHovered(false)}
+      onClick={onSignOut}
+    >
+      {signOutHovered ? (
+        <DoorOpenIcon size={16} />
+      ) : (
+        <DoorClosedIcon size={16} />
+      )}
+      Sign Out
+    </Button>
+  );
+};
