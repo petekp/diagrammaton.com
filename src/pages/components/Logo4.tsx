@@ -4,9 +4,11 @@ import { useEffect } from "react";
 export default function Logo({
   eyeHeight,
   isDarkMode,
+  size = 80,
 }: {
   eyeHeight: number;
   isDarkMode: boolean;
+  size?: number;
 }) {
   const svgHeight = 143;
   const maskHeight = useMotionValue(eyeHeight);
@@ -33,9 +35,9 @@ export default function Logo({
 
   return (
     <svg
-      width="80"
-      height="80"
-      viewBox="0 0 143 143"
+      width={size}
+      height={size}
+      viewBox={`0 0 ${svgHeight} ${svgHeight}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >

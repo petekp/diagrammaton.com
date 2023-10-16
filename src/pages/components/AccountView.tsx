@@ -199,9 +199,7 @@ export default function AccountView({
               <TooltipTrigger asChild>
                 <HelpCircle
                   size={16}
-                  className={`border-3 ${
-                    generateLicenseKey.isLoading ? "animate-spin" : ""
-                  } stroke-gray-500 hover:stroke-gray-400 dark:stroke-gray-500 dark:hover:stroke-gray-400`}
+                  className={`border-3 stroke-gray-500 hover:stroke-gray-400 dark:stroke-gray-400 dark:hover:stroke-gray-300`}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -287,7 +285,7 @@ export default function AccountView({
                   initial={{ opacity: 0.01 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="success-message animate-bounce text-green-600"
+                  className="success-message animate-bounce text-green-600 dark:text-green-400"
                 >
                   {copySuccess}
                 </motion.span>
@@ -329,7 +327,11 @@ export default function AccountView({
                                 generateLicenseKey.isLoading
                                   ? "animate-spin"
                                   : ""
-                              } stroke-purple-600 hover:stroke-purple-500 dark:stroke-purple-500 dark:hover:stroke-purple-400`}
+                              } ${
+                                licenseKeyFieldIsLoading
+                                  ? "stroke-gray-400 dark:stroke-gray-200 "
+                                  : "stroke-purple-600 dark:stroke-green-500"
+                              }`}
                             />
                           </Button>
                         </TooltipTrigger>
@@ -351,7 +353,7 @@ export default function AccountView({
                     }
                     variant="secondary"
                     type="button"
-                    className="h-6 w-12"
+                    className="h-6 w-12 border border-purple-700/60 bg-transparent text-purple-700/90 hover:border-purple-700 hover:bg-transparent hover:text-purple-800 dark:border-green-400/50 dark:text-green-400 dark:hover:border-green-600 dark:hover:text-green-400"
                     onClick={(e) => copyLicenseKey(e)}
                   >
                     Copy

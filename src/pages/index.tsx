@@ -211,14 +211,14 @@ export default function Home({
           <Link
             href="https://petekp.notion.site/Terms-of-Service-eacb3d1abe624dcbb7de1b86c0617b18?pvs=4"
             target="_blank"
-            className="h-0 p-0 font-medium text-primary underline-offset-4 hover:underline"
+            className="h-0 p-0 font-medium text-muted-foreground underline-offset-4 hover:underline"
           >
             Terms
           </Link>{" "}
           <Link
             href="https://petekp.notion.site/Privacy-Policy-d000f7c9676a4979a394070439bb0f99?pvs=4"
             target="_blank"
-            className="h-0 p-0 font-medium text-primary underline-offset-4 hover:underline"
+            className="h-0 p-0 font-medium text-muted-foreground underline-offset-4 hover:underline"
           >
             Privacy
           </Link>
@@ -358,14 +358,22 @@ function SignIn({
             variants={logoVariants}
             initial="hidden"
             animate="visible"
-            className="flex  items-center justify-center align-middle"
+            className="flex items-center justify-center align-middle"
           >
-            <Logo4 eyeHeight={eyeHeight} isDarkMode={isDarkMode} />
+            <Logo4
+              eyeHeight={eyeHeight}
+              isDarkMode={isDarkMode}
+              size={sessionData ? 60 : 80}
+            />
           </motion.div>
           <div className="space-y-1 text-center">
             <motion.div
               {...staggerAnimation}
-              className={`text text-2xl uppercase tracking-widest text-foreground sm:text-3xl ${lexend.className} `}
+              className={`text text-2xl uppercase tracking-widest text-foreground  ${
+                lexend.className
+              } ${
+                sessionData ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+              } `}
             >
               {"Diagrammaton".split("").map((char, index) => (
                 <motion.span
@@ -381,7 +389,9 @@ function SignIn({
               variants={descriptionVariants}
               initial="hidden"
               animate="visible"
-              className="text tracking-wide  text-center text-muted"
+              className={`text tracking-wide text-center text-muted ${
+                sessionData ? "text-sm sm:text-base" : ""
+              }`}
             >
               AI powered diagrams for FigJam
             </motion.p>
