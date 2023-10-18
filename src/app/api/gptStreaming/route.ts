@@ -1,6 +1,7 @@
 import { OpenAIStream, StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 import { z } from "zod";
+import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
 import {
   functions,
@@ -12,9 +13,11 @@ import {
   DiagrammatonError,
   InvalidApiKey,
   InvalidLicenseKey,
+  NoDescriptionProvided,
 } from "~/server/api/routers/errors";
-import { logError } from "~/utils/log";
+import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "~/app/rateLimiter";
 
 export function OPTIONS(req: Request) {
   return new Response(null, { status: 204 });
@@ -26,6 +29,23 @@ export async function POST(req: Request) {
     licenseKey,
     model = "gpt4",
   } = (await req.json()) as z.infer<typeof generateInputSchema>;
+  const headersList = headers();
+  const ipaddress = headersList.get("x-forwarded-for");
+
+  const startTime = Date.now();
+  const identifier = ipaddress ?? licenseKey;
+
+  await checkRateLimit(identifier);
+
+  if (!diagramDescription) {
+    throw new NoDescriptionProvided({ diagramDescription });
+  }
+
+  const timeout = setTimeout(() => {
+    logError("Function is about to timeout", {
+      diagramDescription,
+    });
+  }, 55000);
 
   try {
     if (!licenseKey) {
@@ -51,6 +71,15 @@ export async function POST(req: Request) {
 
     const stream = OpenAIStream(response);
 
+    const endTime = Date.now(); // End time
+    const timeTaken = (endTime - startTime) / 1000;
+    console.info(`Time taken: ${timeTaken}s`);
+
+    logInfo("Successfully began diagram stream", {
+      diagramDescription,
+      timeTaken,
+    });
+
     return new StreamingTextResponse(stream);
   } catch (err) {
     if (err instanceof DiagrammatonError) {
@@ -63,5 +92,7 @@ export async function POST(req: Request) {
         }
       );
     }
+  } finally {
+    clearTimeout(timeout);
   }
 }
