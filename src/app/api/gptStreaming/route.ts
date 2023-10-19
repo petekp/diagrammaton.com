@@ -8,7 +8,7 @@ import {
   createMessages,
   GPTModels,
 } from "~/plugins/diagrammaton/lib";
-import { generateInputSchema } from "~/server/api/routers/diagrammaton";
+
 import {
   DiagrammatonError,
   InvalidApiKey,
@@ -18,6 +18,15 @@ import {
 import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "~/app/rateLimiter";
+
+const generateInputSchema = z.object({
+  licenseKey: z.string(),
+  diagramDescription: z.string(),
+  model: z
+    .union([z.literal("gpt3"), z.literal("gpt4")])
+    .optional()
+    .default("gpt3"),
+});
 
 export function OPTIONS(req: Request) {
   return new Response(null, { status: 204 });
@@ -47,11 +56,9 @@ export async function POST(req: Request) {
     throw new NoDescriptionProvided({ diagramDescription });
   }
 
-  const timeout = setTimeout(() => {
-    logError("Function is about to timeout", {
-      diagramDescription,
-    });
-  }, 55000);
+  const endTime = Date.now(); // End time
+  const timeTaken = (endTime - startTime) / 1000;
+  console.info(`Time taken: ${timeTaken}s`);
 
   try {
     if (!licenseKey) {
@@ -76,15 +83,33 @@ export async function POST(req: Request) {
     });
 
     const stream = OpenAIStream(response);
+    const reader = stream.getReader();
 
-    const endTime = Date.now(); // End time
-    const timeTaken = (endTime - startTime) / 1000;
-    console.info(`Time taken: ${timeTaken}s`);
+    reader
+      .read()
+      .then(async function process({
+        value,
+        done,
+      }: {
+        value?: unknown;
+        done: boolean;
+      }): Promise<void> {
+        while (!done) {
+          const result = await reader.read();
+          value = result.value;
+          done = result.done;
+        }
 
-    logInfo("Successfully began diagram stream", {
-      diagramDescription,
-      timeTaken,
-    });
+        if (done) {
+          logInfo("Successfully streamed diagram", {
+            diagramDescription,
+            timeTaken,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Error while processing stream:", err);
+      });
 
     return new StreamingTextResponse(stream);
   } catch (err) {
@@ -99,6 +124,5 @@ export async function POST(req: Request) {
       );
     }
   } finally {
-    clearTimeout(timeout);
   }
 }
