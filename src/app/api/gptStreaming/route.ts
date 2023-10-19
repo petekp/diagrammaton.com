@@ -45,10 +45,8 @@ export async function POST(req: Request) {
   });
 
   const headersList = headers();
-  const ipaddress = headersList.get("x-forwarded-for");
-
-  const startTime = Date.now();
-  const identifier = ipaddress ?? licenseKey;
+  const ipAddress = headersList.get("x-forwarded-for");
+  const identifier = ipAddress ?? licenseKey;
 
   await checkRateLimit(identifier);
 
@@ -56,9 +54,11 @@ export async function POST(req: Request) {
     throw new NoDescriptionProvided({ diagramDescription });
   }
 
-  const endTime = Date.now(); // End time
-  const timeTaken = (endTime - startTime) / 1000;
-  console.info(`Time taken: ${timeTaken}s`);
+  const timeout = setTimeout(() => {
+    logError("Function is about to timeout", {
+      diagramDescription,
+    });
+  }, 55000);
 
   try {
     if (!licenseKey) {
@@ -83,33 +83,6 @@ export async function POST(req: Request) {
     });
 
     const stream = OpenAIStream(response);
-    const reader = stream.getReader();
-
-    reader
-      .read()
-      .then(async function process({
-        value,
-        done,
-      }: {
-        value?: unknown;
-        done: boolean;
-      }): Promise<void> {
-        while (!done) {
-          const result = await reader.read();
-          value = result.value;
-          done = result.done;
-        }
-
-        if (done) {
-          logInfo("Successfully streamed diagram", {
-            diagramDescription,
-            timeTaken,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error("Error while processing stream:", err);
-      });
 
     return new StreamingTextResponse(stream);
   } catch (err) {
@@ -124,5 +97,6 @@ export async function POST(req: Request) {
       );
     }
   } finally {
+    clearTimeout(timeout);
   }
 }
