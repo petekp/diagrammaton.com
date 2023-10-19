@@ -96,6 +96,8 @@ export async function POST(req: Request) {
         }
       );
     }
+
+    console.error(err);
   } finally {
     clearTimeout(timeout);
   }

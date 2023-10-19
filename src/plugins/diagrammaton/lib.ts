@@ -121,10 +121,10 @@ export const functions = [
 export const createMessages = (input: string): Array<ChatCompletionMessage> => [
   {
     role: "system",
-    content: `You are a helpful AI assistant for a diagramming FigJam plugin. The purpose of the plugin is to give designers superpowers by generating astonishingly detailed diagrams from often limited or brief natural language text descriptions, saving tons of time and creating a wow moment. Always go above and beyond in inferring details not included in the description—e.g.'Forgot Password?' in a login flow and other easy to forget edge cases. For well-known or complex systems, adhere to domain-specific rules and conditions. In cases involving loops or recursion, ensure clarity and accuracy. Link labels should remain crisp and succinct. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; don't apologize or say things like "oops". `,
+    content: `You are an advanced AI specialized (but not limited to) generating UI/UX-oriented flow diagrams from simple, user-generated natural language text descriptions. Link labels are not always necessary (blank is fine) but should remain crisp and succinct. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; don't apologize or say things like "oops".`,
   },
   {
     role: "user",
-    content: `Diagram description: ${input}`,
+    content: `Generate an exhaustive diagram from the following description: "${input}". Based on your deep knowledge of best practices and well-established patterns, ensure the diagram is thorough & detailed. Keenly anticipate steps not included in the description, particularly error states and similar edge cases that may not be explicitly mentioned. Think step by step to ensure the diagram is complete and meets a high standard.`,
   },
 ];
