@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
+import GoogleIcon from "./components/GoogleIcon";
 
 const restDelta = 0.005;
 const DIAMONDS_NUM = 30;
@@ -420,7 +421,16 @@ function SignIn({
                   className="gap-2"
                   onClick={() => void signIn(provider.id)}
                 >
-                  {`Sign in with ${provider.name}`}
+                  <GoogleIcon />{" "}
+                  <span
+                    style={{
+                      width: 1,
+                      height: "100%",
+                      backgroundColor: "rgba(255,255,255,0.3)",
+                      margin: "0 0.2rem",
+                    }}
+                  />{" "}
+                  {`Sign in to get a key`}
                   <ArrowRightIcon size={16} />
                 </Button>
               </motion.div>
