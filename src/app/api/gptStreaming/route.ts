@@ -3,11 +3,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
-import {
-  functions,
-  generateMessages,
-  GPTModels,
-} from "~/plugins/diagrammaton/lib";
+import { functions, generateMessages } from "~/plugins/diagrammaton/lib";
 
 import {
   DiagrammatonError,
@@ -17,45 +13,7 @@ import {
 import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "~/app/rateLimiter";
-
-export const Action = z.union([z.literal("generate"), z.literal("modify")]);
-
-export const generateInputSchema = z.object({
-  licenseKey: z.string(),
-  diagramDescription: z.string(),
-  model: z
-    .union([z.literal("gpt3"), z.literal("gpt4")])
-    .optional()
-    .default("gpt3"),
-});
-
-// diagramId
-// diagramNodeId
-// diagramData
-// instructions
-// licenseKey
-// model
-
-export const modifyInputSchema = z.object({
-  diagramId: z.string(),
-  diagramNodeId: z.string(),
-  diagramData: z.any(),
-  licenseKey: z.string(),
-  instructions: z.string(),
-  model: z
-    .union([z.literal("gpt3"), z.literal("gpt4")])
-    .optional()
-    .default("gpt3"),
-});
-
-export const actionSchemas: Record<
-  z.infer<typeof Action>,
-  z.ZodSchema<any, any>
-> = {
-  generate: generateInputSchema,
-  modify: modifyInputSchema,
-  // add more actions here in the future
-};
+import { Action, actionSchemas, ActionDataMap } from "~/app/types";
 
 export function OPTIONS(req: Request) {
   return new Response(null, { status: 204 });
@@ -64,15 +22,22 @@ export function OPTIONS(req: Request) {
 export async function POST(req: Request) {
   const { action, data } = (await req.json()) as {
     action: z.infer<typeof Action>;
-    data: any;
+    data: ActionDataMap[z.infer<typeof Action>];
   };
 
   const schema = actionSchemas[action];
+
   if (!schema) {
     throw new Error("Invalid action");
   }
 
   const inputData = schema.parse(data);
+
+  const modelMapping = {
+    gpt3: "gpt-3.5-turbo-0613",
+    gpt4: "gpt-4-0613",
+  };
+
   const { licenseKey, model } = inputData;
 
   console.info("Generate endpoint called: ", {
@@ -102,13 +67,15 @@ export async function POST(req: Request) {
     });
 
     const response = await openai.chat.completions.create({
-      model: GPTModels[model as keyof typeof GPTModels],
+      model: modelMapping[model],
       stream: true,
       messages: generateMessages({ action, data: inputData }),
       functions,
     });
 
     const stream = OpenAIStream(response);
+
+    logInfo("Streaming initiated");
 
     return new StreamingTextResponse(stream);
   } catch (err) {
@@ -122,7 +89,5 @@ export async function POST(req: Request) {
         }
       );
     }
-
-    return err;
   }
 }
