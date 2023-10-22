@@ -437,10 +437,10 @@ function SignIn({
             ))}
             <Button variant="outline" asChild>
               <Link
-                href="https://petekp.notion.site/Diagrammaton-cfa9b2043fcc4bbba008c4925ff9ccb4?pvs=4"
+                href="https://www.figma.com/community/plugin/1295127627739218424/diagrammaton"
                 target="_blank"
               >
-                Learn more
+                Get the plugin
               </Link>
             </Button>
           </motion.div>
