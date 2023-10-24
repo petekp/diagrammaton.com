@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     licenseKey,
     model = "gpt4",
   } = (await req.json()) as z.infer<typeof generateInputSchema>;
-  console.info("Generate endpoint called: ", {
+  logInfo("Generate endpoint called: ", {
     diagramDescription,
     licenseKey,
     model,
