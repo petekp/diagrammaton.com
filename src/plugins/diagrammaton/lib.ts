@@ -1,8 +1,11 @@
 import { ChatCompletionMessage } from "openai/resources/chat";
-export const GPTModels = {
-  gpt3: "gpt-3.5-turbo-0613",
-  gpt4: "gpt-4-0613",
-} as const;
+import { z } from "zod";
+import {
+  Action,
+  ActionDataMap,
+  generateInputSchema,
+  modifyInputSchema,
+} from "~/app/types";
 
 const shapes = [
   "ROUNDED_RECTANGLE",
@@ -118,13 +121,53 @@ export const functions = [
   },
 ];
 
-export const createMessages = (input: string): Array<ChatCompletionMessage> => [
-  {
-    role: "system",
-    content: `You are an advanced AI specialized (but not limited to) generating UI/UX-oriented flow diagrams from simple, user-generated natural language text descriptions. Link labels are not always necessary (blank is fine) but should remain crisp and succinct. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; don't apologize or say things like "oops".`,
-  },
-  {
-    role: "user",
-    content: `Generate an exhaustive diagram from the following description: "${input}". Based on your deep knowledge of best practices and well-established patterns, ensure the diagram is thorough & detailed. Keenly anticipate steps not included in the description, particularly error states and similar edge cases that may not be explicitly mentioned. Think step by step to ensure the diagram is complete and meets a high standard.`,
-  },
-];
+export const generateMessages = <T extends z.infer<typeof Action>>({
+  action,
+  data,
+}: {
+  action: T;
+  data: ActionDataMap[T];
+}) => {
+  switch (action) {
+    case "generate":
+      return createGenerateMessages(data as ActionDataMap["generate"]);
+
+    case "modify":
+      return createModifyMessages(data as ActionDataMap["modify"]);
+
+    default:
+      return createGenerateMessages(data as ActionDataMap["generate"]);
+  }
+};
+
+export const createGenerateMessages = (
+  data: z.infer<typeof generateInputSchema>
+): Array<ChatCompletionMessage> => {
+  const { diagramDescription } = data;
+  return [
+    {
+      role: "system",
+      content: `You are an advanced AI specialized (but not limited to) generating UI/UX-oriented flow diagrams from simple, user-generated natural language text descriptions. Link labels are not always necessary (blank is fine) but should remain crisp and succinct. If you're unable to generate a useful diagram from the description, print an error that's both witty and helpful; don't apologize or say things like "oops".`,
+    },
+    {
+      role: "user",
+      content: `Generate an exhaustive diagram from the following description: "${diagramDescription}". Based on your deep knowledge of best practices and well-established patterns, ensure the diagram is thorough & detailed. Keenly anticipate steps not included in the description, particularly error states and similar edge cases that may not be explicitly mentioned. Think step by step to ensure the diagram is complete and meets a high standard.`,
+    },
+  ];
+};
+
+export const createModifyMessages = (
+  data: z.infer<typeof modifyInputSchema>
+): Array<ChatCompletionMessage> => {
+  const { diagramData, instructions } = data;
+  return [
+    {
+      role: "system",
+      content: `You are an advanced AI specialized (but not limited to) modifying existing UI/UX-oriented flow diagram data based on natural language instructions provided by the end user.`,
+    },
+    {
+      role: "user",
+      content: `Modify the following diagram data according to these instructions:\n\nDiagram data: ${diagramData}\n\n Instructions: "${instructions}"\n\n Based on your deep knowledge of best practices and well-established patterns, ensure the diagram is both updated to satisfy the instructions, and re-configured if necessary. Keenly anticipate steps not included in the instructions, particularly error states and similar edge cases that may not be explicitly mentioned. Think step by step to ensure the diagram is complete and meets a high standard. If the instructions are unclear or impossible to follow, print an error that's both witty and helpful; don't apologize or say things like "oops".`,
+    },
+  ];
+};

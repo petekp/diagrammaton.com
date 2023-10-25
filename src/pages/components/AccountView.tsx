@@ -177,7 +177,6 @@ export default function AccountView({
 
   useEffect(() => {
     if (!isValidating && !isSubmitting && isValid && !wasValidRef.current) {
-      console.log(apiKey);
       void onSubmitApiKey();
     }
     wasValidRef.current = isValid;

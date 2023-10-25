@@ -3,45 +3,46 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
-import {
-  functions,
-  createMessages,
-  GPTModels,
-} from "~/plugins/diagrammaton/lib";
+import { functions, generateMessages } from "~/plugins/diagrammaton/lib";
 
 import {
   DiagrammatonError,
   InvalidApiKey,
   InvalidLicenseKey,
-  NoDescriptionProvided,
 } from "~/server/api/routers/errors";
 import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "~/app/rateLimiter";
-
-const generateInputSchema = z.object({
-  licenseKey: z.string(),
-  diagramDescription: z.string(),
-  model: z
-    .union([z.literal("gpt3"), z.literal("gpt4")])
-    .optional()
-    .default("gpt3"),
-});
+import { Action, actionSchemas, ActionDataMap } from "~/app/types";
 
 export function OPTIONS(req: Request) {
   return new Response(null, { status: 204 });
 }
 
 export async function POST(req: Request) {
-  const {
-    diagramDescription,
-    licenseKey,
-    model = "gpt4",
-  } = (await req.json()) as z.infer<typeof generateInputSchema>;
-  logInfo("Generate endpoint called: ", {
-    diagramDescription,
-    licenseKey,
-    model,
+  const { action, data } = (await req.json()) as {
+    action: z.infer<typeof Action>;
+    data: ActionDataMap[z.infer<typeof Action>];
+  };
+
+  const schema = actionSchemas[action];
+
+  if (!schema) {
+    throw new Error("Invalid action");
+  }
+
+  const inputData = schema.parse(data);
+
+  const modelMapping = {
+    gpt3: "gpt-3.5-turbo-0613",
+    gpt4: "gpt-4-0613",
+  };
+
+  const { licenseKey, model } = inputData;
+
+  console.info("Generate endpoint called: ", {
+    action,
+    data: inputData,
   });
 
   const headersList = headers();
@@ -49,16 +50,6 @@ export async function POST(req: Request) {
   const identifier = ipAddress ?? licenseKey;
 
   await checkRateLimit(identifier);
-
-  if (!diagramDescription) {
-    throw new NoDescriptionProvided({ diagramDescription });
-  }
-
-  const timeout = setTimeout(() => {
-    logError("Function is about to timeout", {
-      diagramDescription,
-    });
-  }, 55000);
 
   try {
     if (!licenseKey) {
@@ -76,13 +67,15 @@ export async function POST(req: Request) {
     });
 
     const response = await openai.chat.completions.create({
-      model: GPTModels[model],
+      model: modelMapping[model],
       stream: true,
-      messages: createMessages(diagramDescription),
+      messages: generateMessages({ action, data: inputData }),
       functions,
     });
 
     const stream = OpenAIStream(response);
+
+    logInfo("Streaming initiated");
 
     return new StreamingTextResponse(stream);
   } catch (err) {
@@ -96,9 +89,5 @@ export async function POST(req: Request) {
         }
       );
     }
-
-    console.error(err);
-  } finally {
-    clearTimeout(timeout);
   }
 }
