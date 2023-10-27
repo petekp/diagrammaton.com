@@ -75,7 +75,10 @@ export async function POST(req: Request) {
 
     const stream = OpenAIStream(response);
 
-    logInfo("Streaming initiated");
+    logInfo("Streaming initiated", {
+      action,
+      ...inputData,
+    });
 
     return new StreamingTextResponse(stream);
   } catch (err) {
