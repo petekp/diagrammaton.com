@@ -17,7 +17,7 @@ export const apiKeyRouter = createTRPCRouter({
         },
         body: JSON.stringify({
           prompt: "a",
-          model: "ada",
+          model: "babbage-002",
           max_tokens: 1,
         }),
       });
