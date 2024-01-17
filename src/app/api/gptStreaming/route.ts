@@ -58,6 +58,8 @@ export async function POST(req: Request) {
 
     const { user } = await fetchUserByLicenseKey(licenseKey);
 
+    console.info(user);
+
     if (!user.openaiApiKey) {
       throw new InvalidApiKey();
     }
@@ -73,6 +75,8 @@ export async function POST(req: Request) {
       functions,
     });
 
+    console.info(response);
+
     const stream = OpenAIStream(response);
 
     logInfo("Streaming initiated", {
@@ -87,6 +91,15 @@ export async function POST(req: Request) {
       logError(err.message, err.logArgs);
       return NextResponse.json(
         { type: "error", message: err.message },
+        {
+          status: 500,
+        }
+      );
+    } else {
+      console.error(err);
+      logError(err as unknown as string);
+      return NextResponse.json(
+        { type: "error", message: "An unexpected error occurred 🫠" },
         {
           status: 500,
         }
