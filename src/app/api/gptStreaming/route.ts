@@ -86,24 +86,17 @@ export async function POST(req: Request) {
 
     return new StreamingTextResponse(stream);
   } catch (err) {
-    if (err instanceof DiagrammatonError) {
-      console.error(err);
-      logError(err.message, err.logArgs);
-      return NextResponse.json(
-        { type: "error", message: err.message },
-        {
-          status: 500,
-        }
-      );
-    } else {
-      console.error(err);
-      logError(err as string);
-      return NextResponse.json(
-        { type: "error", message: "An unexpected error occurred 🫠" },
-        {
-          status: 500,
-        }
-      );
-    }
+    console.error(err);
+    logError(err as string);
+    const message =
+      err instanceof DiagrammatonError || err instanceof Error
+        ? err.message
+        : "An unexpected error occurred 🫠";
+    return NextResponse.json(
+      { type: "error", message },
+      {
+        status: 500,
+      }
+    );
   }
 }

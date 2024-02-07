@@ -51,10 +51,5 @@ export async function verifyLicenseKey(key: string) {
     }
 
     handleError(err as Error);
-
-    return {
-      success: false,
-      message: "Unable to verify license key due to a server error",
-    };
   }
 }
