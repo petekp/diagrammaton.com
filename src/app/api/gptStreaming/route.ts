@@ -96,6 +96,10 @@ export async function POST(req: Request) {
       { type: "error", message },
       {
         status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
       }
     );
   }

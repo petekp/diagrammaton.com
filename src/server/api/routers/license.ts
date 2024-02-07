@@ -18,7 +18,6 @@ export const licenseKeyRouter = createTRPCRouter({
   }),
   generateLicenseKey: protectedProcedure.mutation(async ({ ctx }) => {
     const licenseKey = generateLicenseKey();
-    /* Your license key generation logic here */
 
     const oneYearFromNowDt = new Date(
       new Date().getTime() + 1000 * 60 * 60 * 24 * 365
@@ -31,7 +30,6 @@ export const licenseKeyRouter = createTRPCRouter({
     });
 
     if (existingLicenseKey) {
-      // If a license key exists, update it
       await ctx.prisma.licenseKey.update({
         where: {
           id: existingLicenseKey.id,
@@ -42,7 +40,6 @@ export const licenseKeyRouter = createTRPCRouter({
         },
       });
     } else {
-      // If no license key exists, create a new one
       await ctx.prisma.licenseKey.create({
         data: {
           userId: ctx.session.user.id,
