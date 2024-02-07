@@ -1,4 +1,4 @@
-import { ChatCompletionMessage } from "openai/resources/chat";
+import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { z } from "zod";
 import {
   Action,
@@ -142,7 +142,7 @@ export const generateMessages = <T extends z.infer<typeof Action>>({
 
 export const createGenerateMessages = (
   data: z.infer<typeof generateInputSchema>
-): Array<ChatCompletionMessage> => {
+): Array<ChatCompletionMessageParam> => {
   const { diagramDescription } = data;
   return [
     {
@@ -158,7 +158,7 @@ export const createGenerateMessages = (
 
 export const createModifyMessages = (
   data: z.infer<typeof modifyInputSchema>
-): Array<ChatCompletionMessage> => {
+): Array<ChatCompletionMessageParam> => {
   const { diagramData, instructions } = data;
   return [
     {
