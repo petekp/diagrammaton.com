@@ -1,3 +1,4 @@
+import { FunctionDefinition } from "openai/resources";
 import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { z } from "zod";
 import {
@@ -103,7 +104,7 @@ const messageSchema = {
     "A witty, humorous, and very concise description of the issue encountered and how the user can resolve it.",
 };
 
-export const functions = [
+export const functions: FunctionDefinition[] = [
   {
     name: "generate_diagram_json",
     description: `Translates a diagram description into valid JSON`,
@@ -131,14 +132,12 @@ export const functions = [
     name: "generate_error_message",
     description:
       "Prints witty and very concise user-facing error explaining why you weren't able to draw a diagram based on the provided diagram description.",
-    type: "object",
     parameters: {
       type: "object",
       properties: {
         message: messageSchema,
       },
     },
-    required: ["message"],
   },
 ];
 

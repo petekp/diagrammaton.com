@@ -38,7 +38,7 @@
     "next-auth": "^4.23.2",
     "next-themes": "^0.2.1",
     "nextjs-cors": "^2.1.2",
-    "openai": "4.24.7",
+    "openai": "4.33.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.45.1",
