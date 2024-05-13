@@ -23,7 +23,32 @@ const modelMapping = {
   gpt3: "gpt-3.5-turbo",
   gpt4: "gpt-4",
   gpt4turbo: "gpt-4-turbo",
+  gpt4omni: "gpt-4o",
 } as const;
+
+const isModelAvailable = (
+  available_models: OpenAI.Models.ModelsPage,
+  modelKey: keyof typeof modelMapping
+) => {
+  return available_models.data.some(
+    (model) => model.id === modelMapping[modelKey]
+  );
+};
+
+const getPreferredModel = (
+  available_models: OpenAI.Models.ModelsPage,
+  model: keyof typeof modelMapping
+) => {
+  if (model === "gpt4") {
+    if (isModelAvailable(available_models, "gpt4omni")) {
+      return "gpt4omni";
+    }
+    if (isModelAvailable(available_models, "gpt4turbo")) {
+      return "gpt4turbo";
+    }
+  }
+  return model;
+};
 
 const selectGPTModel = ({
   available_models,
@@ -32,13 +57,7 @@ const selectGPTModel = ({
   available_models: OpenAI.Models.ModelsPage;
   model: keyof typeof modelMapping;
 }) => {
-  const has_gpt4_turbo = Boolean(
-    available_models.data.find((model) => model.id === "gpt-4-turbo-preview")
-  );
-
-  const selectedModel: keyof typeof modelMapping =
-    model === "gpt4" ? (has_gpt4_turbo ? "gpt4turbo" : "gpt4") : model;
-
+  const selectedModel = getPreferredModel(available_models, model);
   return modelMapping[selectedModel];
 };
 
