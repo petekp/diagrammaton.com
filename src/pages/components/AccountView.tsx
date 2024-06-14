@@ -27,17 +27,9 @@ import { LICENSE_LENGTH } from "@/lib/utils";
 
 const apiKeyMask = "sk-••••••••••••••••••••••••••••••••";
 
-const openaiApiKeySchema = z
-  .string()
-  .min(51, {
-    message: "Invalid key length, double check it and paste again.",
-  })
-  .max(51, {
-    message: "Invalid key length, double check it and paste again.",
-  })
-  .startsWith("sk-", {
-    message: "Invalid key length, double check it and paste again.",
-  });
+const openaiApiKeySchema = z.string().startsWith("sk-", {
+  message: "Invalid key, please double check it and paste again.",
+});
 
 const formSchema = z.object({
   openaiApiKey: openaiApiKeySchema,
