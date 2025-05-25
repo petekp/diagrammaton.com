@@ -17,8 +17,8 @@ import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
+import { prisma } from "~/server/db";
 import GoogleIcon from "./components/GoogleIcon";
 
 const restDelta = 0.005;
@@ -465,7 +465,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   };
 
   if (sessionData?.user?.id) {
-    const prisma = new PrismaClient();
     const userId = sessionData.user.id;
 
     const user = await prisma.user.findUnique({
