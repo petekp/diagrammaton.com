@@ -1,4 +1,3 @@
-import { StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat";
 import type {
@@ -256,7 +255,13 @@ export async function POST(req: Request) {
         },
       });
 
-      return new StreamingTextResponse(stream);
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     };
 
     if (responsesAvailable) {
@@ -414,7 +419,13 @@ export async function POST(req: Request) {
           model: targetModel,
         });
 
-        return new StreamingTextResponse(stream);
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
       } catch (error) {
         const message = (error as Error)?.message || "";
         logError("gptStreaming: responses streaming failed", { message });
