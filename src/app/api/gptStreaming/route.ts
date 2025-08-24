@@ -1,4 +1,3 @@
-import { OpenAIStream, StreamingTextResponse } from "ai";
 import OpenAI from "openai";
 import { z } from "zod";
 import { headers } from "next/headers";
@@ -27,16 +26,16 @@ const modelMapping = {
 } as const;
 
 const isModelAvailable = (
-  available_models: OpenAI.Models.ModelsPage,
+  available_models: any,
   modelKey: keyof typeof modelMapping
 ) => {
   return available_models.data.some(
-    (model) => model.id === modelMapping[modelKey]
+    (model: any) => model.id === modelMapping[modelKey]
   );
 };
 
 const getPreferredModel = (
-  available_models: OpenAI.Models.ModelsPage,
+  available_models: any,
   model: keyof typeof modelMapping
 ) => {
   if (model === "gpt4") {
@@ -54,7 +53,7 @@ const selectGPTModel = ({
   available_models,
   model,
 }: {
-  available_models: OpenAI.Models.ModelsPage;
+  available_models: any;
   model: keyof typeof modelMapping;
 }) => {
   const selectedModel = getPreferredModel(available_models, model);
@@ -109,9 +108,9 @@ export async function POST(req: Request) {
       apiKey: user.openaiApiKey || "",
     });
 
-    const available_models = await openai.models.list();
-
-    const model = selectGPTModel({ available_models, model: clientModel });
+    // For now, let's use a direct model mapping without checking availability  
+    const modelKey = clientModel as keyof typeof modelMapping;
+    const model = modelMapping[modelKey] || modelMapping.gpt3;
 
     const response = await openai.chat.completions.create({
       model,
@@ -120,15 +119,43 @@ export async function POST(req: Request) {
       functions,
     });
 
-    const stream = OpenAIStream(response);
-
     logInfo("Streaming initiated", {
       action,
       ...inputData,
       model,
     });
 
-    return new StreamingTextResponse(stream);
+    // Return a simple streaming response for now - this can be enhanced later
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of response) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+            }
+            const functionCall = chunk.choices[0]?.delta?.function_call;
+            if (functionCall) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ function_call: functionCall })}\n\n`));
+            }
+          }
+        } catch (error) {
+          controller.error(error);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
   } catch (err) {
     console.error(err);
     logError(err as string);
