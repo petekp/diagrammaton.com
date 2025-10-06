@@ -9,7 +9,12 @@
     "lint": "node_modules/next/dist/bin/next lint",
     "start": "node_modules/next/dist/bin/next start",
     "db:push": "dotenv -f .env.local run npx prisma db push",
-    "db:migrate": "dotenv -f .env.local run npx prisma db migrate dev"
+    "db:migrate": "dotenv -f .env.local run npx prisma db migrate dev",
+    "dev:local": "dotenv -e .env.dev-local -- npm run dev",
+    "db:push:local": "dotenv -e .env.dev-local -- npx prisma db push",
+    "db:studio:local": "dotenv -e .env.dev-local -- npx prisma studio",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.1.1",
