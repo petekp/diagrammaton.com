@@ -1,9 +1,19 @@
 import { StreamingTextResponse } from "ai";
 import OpenAI from "openai";
-import { z } from "zod";
+import type { ChatCompletionMessageParam } from "openai/resources/chat";
+import type {
+  ResponseInput,
+  ResponseInputText,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
+import { zodResponseFormat, zodTextFormat } from "openai/helpers/zod";
+import { type z } from "zod";
 import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
-import { generateMessages } from "~/plugins/diagrammaton/lib";
+import {
+  diagramResponseSchema,
+  generateMessages,
+} from "~/plugins/diagrammaton/lib";
 
 import {
   DiagrammatonError,
@@ -13,25 +23,119 @@ import {
 import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "~/app/rateLimiter";
-import { Action, actionSchemas, ActionDataMap } from "~/app/types";
+import { type Action, actionSchemas, type ActionDataMap } from "~/app/types";
 
-export function OPTIONS(req: Request) {
+
+export function OPTIONS(_req: Request) {
   return new Response(null, { status: 204 });
 }
 
-// Ensure Node runtime for compatibility with SDK streams
 export const runtime = "nodejs";
 
-// Target GPT‑5 for all generation
-const resolveTargetModel = (_clientModel: "gpt5" | "gpt3" | "gpt4") => "gpt-5" as const;
+const resolveTargetModel = (_clientModel: "gpt5" | "gpt3" | "gpt4") =>
+  "gpt-5" as const;
 
-// Convert legacy chat messages into a single input string for Responses API
-const messagesToInputText = (messages: Array<{ role: string; content: string }>) => {
-  return messages
-    .map((m) => `${m.role.toUpperCase()}: ${typeof m.content === "string" ? m.content : String(m.content)}`)
-    .join("\n\n");
+const diagramResponsesTextFormat = zodTextFormat(
+  diagramResponseSchema,
+  "diagram_response"
+);
+
+const diagramChatResponseFormat = zodResponseFormat(
+  diagramResponseSchema,
+  "diagram_response"
+);
+
+const normalizeMessageContent = (
+  content: ChatCompletionMessageParam["content"]
+): string => {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") {
+          return part;
+        }
+        const candidate = (part as { text?: unknown }).text;
+        return typeof candidate === "string" ? candidate : "";
+      })
+      .join("");
+  }
+
+  if (content && typeof content === "object") {
+    const candidate = (content as { text?: unknown }).text;
+    if (typeof candidate === "string") {
+      return candidate;
+    }
+  }
+
+  return content ? String(content) : "";
 };
 
+const messagesToResponsesInput = (
+  messages: ChatCompletionMessageParam[]
+): ResponseInput => {
+  const responseInput: ResponseInput = [];
+
+  for (const message of messages) {
+    if (message.role !== "system" && message.role !== "user") {
+      continue;
+    }
+
+    const text = normalizeMessageContent(message.content);
+    const content: ResponseInputText = {
+      type: "input_text",
+      text,
+    };
+
+    responseInput.push({
+      type: "message",
+      role: message.role,
+      content: [content],
+    });
+  }
+
+  return responseInput;
+};
+
+const extractOutputText = (response: unknown): string => {
+  if (!response || typeof response !== "object") {
+    return "";
+  }
+
+  const outputText = (response as { output_text?: unknown }).output_text;
+  if (typeof outputText === "string" && outputText.length > 0) {
+    return outputText;
+  }
+
+  const output = (response as { output?: unknown }).output;
+  if (Array.isArray(output)) {
+    let combined = "";
+    for (const item of output) {
+      if (item && typeof item === "object") {
+        const type = (item as { type?: unknown }).type;
+        if (
+          type === "message" &&
+          Array.isArray((item as { content?: unknown }).content)
+        ) {
+          for (const part of (item as { content: unknown[] }).content) {
+            if (part && typeof part === "object") {
+              const partText = (part as { text?: unknown }).text;
+              if (typeof partText === "string") {
+                combined += partText;
+              }
+            }
+          }
+        }
+      }
+    }
+    return combined;
+  }
+
+  return "";
+};
 export async function POST(req: Request) {
   const { action, data } = (await req.json()) as {
     action: z.infer<typeof Action>;
@@ -79,36 +183,90 @@ export async function POST(req: Request) {
 
     const messages = generateMessages({ action, data: inputData });
 
-    const hasResponsesApi = (openai as unknown as { responses?: { create?: unknown } }).responses?.create;
+    const responsesInput = messagesToResponsesInput(messages);
+    const responsesAvailable =
+      typeof (openai as unknown as { responses?: { create?: unknown } })
+        .responses?.create === "function";
+
     logInfo("gptStreaming: API availability", {
-      path: hasResponsesApi ? "responses" : "chat",
+      path: responsesAvailable ? "responses" : "chat",
       targetModel,
     });
 
-    if (hasResponsesApi) {
-      // Responses API streaming path: emit token deltas in real time
-      const inputText = messagesToInputText(
-        messages as Array<{ role: string; content: string }>
-      );
+    const fallbackChatModel = "gpt-4o";
 
+    const buildChatFallbackResponse = async (reason: string) => {
+      logInfo("gptStreaming: chat fallback", {
+        reason,
+        action,
+        ...inputData,
+        model: fallbackChatModel,
+      });
+
+      const chatResponse = await openai.chat.completions.create({
+        model: fallbackChatModel,
+        stream: true,
+        response_format: diagramChatResponseFormat,
+        messages: messages,
+      });
+
+      const iterator = chatResponse[Symbol.asyncIterator]?.bind(chatResponse);
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          if (!iterator) {
+            controller.close();
+            return;
+          }
+          try {
+            const it = iterator() as AsyncIterableIterator<{
+              choices: Array<{
+                delta: { content?: string | null };
+                text?: string;
+              }>;
+            }>;
+            while (true) {
+              const result = await it.next();
+              if (result.done) break;
+              const chunkText =
+                result.value?.choices?.[0]?.delta?.content ??
+                result.value?.choices?.[0]?.text ??
+                "";
+              if (chunkText) controller.enqueue(encoder.encode(chunkText));
+            }
+          } catch (error) {
+            if (!(error instanceof Error) || error.name !== "AbortError") {
+              // Ignore downstream connection issues, partial results may already be delivered.
+              logError("gptStreaming: chat fallback iterator error", {
+                message: (error as Error)?.message,
+              });
+            }
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new StreamingTextResponse(stream);
+    };
+
+    if (responsesAvailable) {
       try {
-        logInfo("gptStreaming: Responses streaming begin", { model: targetModel });
-        // Safety: abort streaming if no chunks arrive within timeout
+        logInfo("gptStreaming: Responses streaming begin", {
+          model: targetModel,
+        });
         const abortController = new AbortController();
-        const streamingNoDataTimeoutMs = 5000;
-        let firstChunkSeen = false;
-        let chunksLogged = 0;
-
-        const noDataTimer = setTimeout(() => {
-          if (!firstChunkSeen) abortController.abort();
-        }, streamingNoDataTimeoutMs);
-
-
-        const respStream = await openai.responses.create(
+        const streamingFirstChunkTimeoutMs = 60000;
+        const respStream = openai.responses.stream(
           {
             model: targetModel,
-            input: inputText,
-            stream: true,
+            input: responsesInput,
+            reasoning: { effort: "low" },
+            text: {
+              format: diagramResponsesTextFormat,
+              verbosity: "low",
+            },
+            store: false,
           },
           { signal: abortController.signal }
         );
@@ -116,107 +274,128 @@ export async function POST(req: Request) {
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
             const encoder = new TextEncoder();
+            let firstChunkSeen = false;
+            let eventsLogged = 0;
+            let deltasLogged = 0;
+            let streamErrored = false;
+            let noDataTimer: ReturnType<typeof setTimeout> | null = null;
 
-            // Try async iterator first (SDK Stream is async iterable)
-            const iterator = (respStream as any)[Symbol.asyncIterator]?.bind(
-              respStream
-            );
-
-            const extractText = (event: any): string => {
-              try {
-                if (!event) return "";
-                // Known shapes for Responses deltas
-                if (typeof event === "string") return event;
-                if (typeof event?.delta === "string") return event.delta;
-                if (typeof event?.text_delta === "string") return event.text_delta;
-                if (typeof event?.output_text === "string") return event.output_text;
-                if (event?.delta?.output_text && typeof event.delta.output_text === "string") {
-                  return event.delta.output_text;
-                }
-                const content = event?.delta?.content || event?.content;
-                if (Array.isArray(content)) {
-                  let s = "";
-                  for (const c of content) {
-                    if (typeof c?.text_delta === "string") s += c.text_delta;
-                    else if (typeof c?.text === "string") s += c.text;
-                  }
-                  if (s) return s;
-                }
-                if (typeof event?.type === "string") {
-                  const maybe =
-                    (event as any).output_text ||
-                    (event as any).text ||
-                    (event as any).response?.output_text;
-                  if (typeof maybe === "string") return maybe;
-                  if (Array.isArray(maybe)) return maybe.join("");
-                }
-              } catch {
-                // ignore parse errors and continue
+            const resetNoDataTimer = () => {
+              if (noDataTimer) clearTimeout(noDataTimer);
+              if (firstChunkSeen) {
+                noDataTimer = null;
+                return;
               }
-              return "";
+              noDataTimer = setTimeout(() => {
+                logError("gptStreaming: responses stream no-data timeout", {
+                  timeoutMs: streamingFirstChunkTimeoutMs,
+                });
+                abortController.abort();
+                respStream.abort();
+              }, streamingFirstChunkTimeoutMs);
             };
 
-            try {
-              if (iterator) {
-                const it = iterator();
-                while (true) {
-                  const { value, done } = await it.next();
-                  if (done) break;
-                  const text = extractText(value);
-                  if (text) {
-                    firstChunkSeen = true;
-                    if (chunksLogged < 5) {
-                      logInfo("gptStreaming: enqueue responses delta", {
-                        bytes: text.length,
-                        preview: text.slice(0, 60),
-                      });
-                      chunksLogged++;
-                    }
-                    controller.enqueue(encoder.encode(text));
+            const emit = (text: string) => {
+              if (!text) return;
+              firstChunkSeen = true;
+              if (deltasLogged < 5) {
+                logInfo("gptStreaming: emit responses delta", {
+                  bytes: text.length,
+                  preview: text.slice(0, 60),
+                });
+                deltasLogged++;
+              }
+              controller.enqueue(encoder.encode(text));
+            };
+
+            const handleEvent = (event: ResponseStreamEvent) => {
+              if (event.type === "response.output_text.delta") {
+                emit(event.delta ?? "");
+                return;
+              }
+
+              if (!firstChunkSeen) {
+                if (event.type === "response.content_part.added") {
+                  const part = event.part;
+                  if (
+                    part?.type === "output_text" &&
+                    typeof part.text === "string" &&
+                    part.text
+                  ) {
+                    emit(part.text);
+                    return;
                   }
                 }
-              } else if (typeof (respStream as any).toReadableStream === "function") {
-                // Fallback: read newline-delimited JSON and extract text
-                const rs: ReadableStream = (respStream as any).toReadableStream();
-                const reader = rs.getReader();
-                const decoder = new TextDecoder();
-                let buf = "";
-                while (true) {
-                  const { value, done } = await reader.read();
-                  if (done) break;
-                  buf += decoder.decode(value, { stream: true });
-                  let idx;
-                  while ((idx = buf.indexOf("\n")) !== -1) {
-                    const line = buf.slice(0, idx);
-                    buf = buf.slice(idx + 1);
-                    if (!line) continue;
-                    try {
-                      const evt = JSON.parse(line);
-                      const text = extractText(evt);
-                      if (text) {
-                        firstChunkSeen = true;
-                        if (chunksLogged < 5) {
-                          logInfo("gptStreaming: enqueue responses ndjson", {
-                            bytes: text.length,
-                            preview: text.slice(0, 60),
-                          });
-                          chunksLogged++;
-                        }
-                        controller.enqueue(encoder.encode(text));
-                      }
-                    } catch {
-                      // ignore malformed lines
-                    }
+                if (event.type === "response.output_item.added") {
+                  const text = extractOutputText({ output: [event.item] });
+                  if (text) {
+                    emit(text);
                   }
                 }
               }
+            };
+
+            resetNoDataTimer();
+
+            try {
+              for await (const event of respStream) {
+                resetNoDataTimer();
+
+                if (eventsLogged < 10) {
+                  logInfo("gptStreaming: responses event", {
+                    type: event.type,
+                  });
+                  eventsLogged++;
+                }
+
+                if (event.type === "error") {
+                  throw new Error(event.message ?? "Responses API error");
+                }
+
+                if (event.type === "response.failed") {
+                  throw new Error(
+                    event.response.error?.message ?? "Responses API failure"
+                  );
+                }
+
+                handleEvent(event);
+              }
+
+              const finalResp = await respStream
+                .finalResponse()
+                .catch((err) => {
+                  logError("gptStreaming: finalResponse retrieval failed", {
+                    message: (err as Error)?.message,
+                  });
+                  return null;
+                });
+
+              if (!firstChunkSeen) {
+                const fallbackText = extractOutputText(finalResp);
+                if (fallbackText) {
+                  emit(fallbackText);
+                }
+              }
+            } catch (error) {
+              streamErrored = true;
+              logError("gptStreaming: responses stream error", {
+                message: (error as Error)?.message,
+              });
+              respStream.abort();
+              controller.error(error as Error);
             } finally {
-              clearTimeout(noDataTimer);
+              if (noDataTimer) clearTimeout(noDataTimer);
               logInfo("gptStreaming: responses stream closed", {
                 firstChunkSeen,
               });
-              controller.close();
+              if (!streamErrored) {
+                controller.close();
+              }
             }
+          },
+          cancel() {
+            abortController.abort();
+            respStream.abort();
           },
         });
 
@@ -227,167 +406,14 @@ export async function POST(req: Request) {
         });
 
         return new StreamingTextResponse(stream);
-      } catch (e: unknown) {
-        // If org is not verified for streaming, fall back to non-streaming Responses
-        const message = (e as Error)?.message || "";
-        logError("gptStreaming: responses streaming error", { message });
-        const shouldFallbackToNonStreaming =
-          message.includes("must be verified to stream") ||
-          message.includes("param: 'stream'") ||
-          message.includes("unsupported_value");
-
-        // Prefer a streaming UX for the plugin: jump straight to chat streaming fallback
-        const preferStreamingFallback = true;
-
-        if (shouldFallbackToNonStreaming && !preferStreamingFallback) {
-          const resp = await openai.responses.create({
-            model: targetModel,
-            input: inputText,
-            stream: false,
-          });
-
-          let outputText =
-            (resp?.output_text as string | undefined) ??
-            (resp?.output?.map?.((o: any) => o?.content?.map?.((c: any) => c?.text).join("")).join("") as string | undefined) ??
-            "";
-
-          // Sanitize common wrappers (code fences) and isolate the JSON array if present
-          outputText = outputText.replace(/```+json\s*|```+/gi, "");
-          const firstBracket = outputText.indexOf("[");
-          const lastBracket = outputText.lastIndexOf("]");
-          let arraySlice =
-            firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket
-              ? outputText.slice(firstBracket, lastBracket + 1)
-              : outputText;
-
-          let parsedArray: any[] | null = null;
-          try {
-            const maybe = JSON.parse(arraySlice);
-            if (Array.isArray(maybe)) parsedArray = maybe;
-          } catch {}
-
-          const stream = new ReadableStream<Uint8Array>({
-            async start(controller) {
-              const encoder = new TextEncoder();
-              // If we could parse, stream object-by-object to mimic live streaming
-              if (parsedArray) {
-                logInfo("gptStreaming: emit array chunks", {
-                  count: parsedArray.length,
-                });
-                controller.enqueue(encoder.encode("["));
-                for (let i = 0; i < parsedArray.length; i++) {
-                  const obj = parsedArray[i];
-                  const chunk = JSON.stringify(obj);
-                  controller.enqueue(encoder.encode(chunk));
-                  if (i < parsedArray.length - 1) controller.enqueue(encoder.encode(","));
-                  // Yield to the reader loop to allow progressive rendering
-                  await new Promise((r) => setTimeout(r, 0));
-                }
-                controller.enqueue(encoder.encode("]"));
-              } else {
-                // Fallback: stream whole text
-                controller.enqueue(encoder.encode(outputText));
-              }
-              controller.close();
-            },
-          });
-
-          logInfo("Responses API non-streaming fallback", {
-            action,
-            ...inputData,
-            model: targetModel,
-          });
-
-          return new StreamingTextResponse(stream);
-        }
-        // Last resort: fall back to chat streaming if Responses API fails otherwise
-        const fallbackChatModel = "gpt-4o";
-        logInfo("gptStreaming: chat fallback begin (responses failure)", {
-          model: fallbackChatModel,
-        });
-        const chatResponse = await openai.chat.completions.create({
-          model: fallbackChatModel,
-          stream: true,
-          messages: messages as any,
-        });
-
-        const iterator = (chatResponse as any)[Symbol.asyncIterator]?.bind(chatResponse);
-        const stream = new ReadableStream<Uint8Array>({
-          async start(controller) {
-            const encoder = new TextEncoder();
-            if (!iterator) {
-              controller.close();
-              return;
-            }
-            try {
-              const it = iterator();
-              while (true) {
-                const { value, done } = await it.next();
-                if (done) break;
-                const chunkText =
-                  value?.choices?.[0]?.delta?.content ?? value?.choices?.[0]?.text ?? "";
-                if (chunkText) controller.enqueue(encoder.encode(chunkText));
-              }
-            } catch {
-            } finally {
-              controller.close();
-            }
-          },
-        });
-
-        logInfo("Chat fallback after Responses failure", {
-          action,
-          ...inputData,
-          model: fallbackChatModel,
-        });
-        return new StreamingTextResponse(stream);
+      } catch (error) {
+        const message = (error as Error)?.message || "";
+        logError("gptStreaming: responses streaming failed", { message });
+        return await buildChatFallbackResponse("responses failure");
       }
     }
 
-    // Fallback: legacy chat completions streaming for environments without Responses API
-    const fallbackChatModel = "gpt-4o";
-    logInfo("gptStreaming: chat fallback (no responses API)", {
-      model: fallbackChatModel,
-    });
-    const chatResponse = await openai.chat.completions.create({
-      model: fallbackChatModel,
-      stream: true,
-      messages: messages as any,
-    });
-
-    // Avoid importing OpenAIStream; implement minimal passthrough using SDK stream
-    const iterator = (chatResponse as any)[Symbol.asyncIterator]?.bind(chatResponse);
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        if (!iterator) {
-          controller.close();
-          return;
-        }
-        try {
-          const it = iterator();
-          while (true) {
-            const { value, done } = await it.next();
-            if (done) break;
-            const chunkText =
-              value?.choices?.[0]?.delta?.content ?? value?.choices?.[0]?.text ?? "";
-            if (chunkText) controller.enqueue(encoder.encode(chunkText));
-          }
-        } catch (e) {
-          // noop; client will receive whatever has been streamed so far
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    logInfo("Streaming initiated (chat fallback)", {
-      action,
-      ...inputData,
-      model: fallbackChatModel,
-    });
-
-    return new StreamingTextResponse(stream);
+    return await buildChatFallbackResponse("responses unavailable");
   } catch (err) {
     console.error(err);
     logError(err as string);
