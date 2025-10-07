@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prisma } from "../../db";
+import OpenAI from "openai";
 
 const apiKeyLastFourSchema = z.string().nullable();
 
@@ -9,20 +10,14 @@ export const apiKeyRouter = createTRPCRouter({
     .input(z.string())
     .output(z.boolean())
     .mutation(async ({ input }) => {
-      const response = await fetch("https://api.openai.com/v1/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${input}`,
-        },
-        body: JSON.stringify({
-          prompt: "a",
-          model: "babbage-002",
-          max_tokens: 1,
-        }),
-      });
-
-      return response.status === 200;
+      try {
+        const client = new OpenAI({ apiKey: input });
+        // Minimal, non-invasive call that works across model generations
+        await client.models.list();
+        return true;
+      } catch {
+        return false;
+      }
     }),
   getUserKeyLastFour: protectedProcedure
     .output(apiKeyLastFourSchema)

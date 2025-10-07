@@ -2,7 +2,14 @@ import { z } from "zod";
 
 export const Action = z.union([z.literal("generate"), z.literal("modify")]);
 
-export const modelSchema = z.union([z.literal("gpt3"), z.literal("gpt4")]);
+// Accept legacy values but normalize to "gpt5"
+export const modelSchema = z.preprocess((val) => {
+  const v = String(val);
+  if (v === "gpt3" || v === "gpt-3.5" || v === "gpt4" || v === "gpt-4") {
+    return "gpt5";
+  }
+  return v;
+}, z.literal("gpt5"));
 
 export const generateInputSchema = z.object({
   diagramDescription: z.string(),
