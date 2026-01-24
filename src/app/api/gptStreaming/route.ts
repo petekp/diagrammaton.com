@@ -18,7 +18,6 @@ import {
 import {
   DiagrammatonError,
   InvalidApiKey,
-  InvalidLicenseKey,
 } from "~/server/api/routers/errors";
 import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
@@ -157,6 +156,19 @@ export async function POST(req: Request) {
     data: inputData,
   });
 
+  if (!licenseKey) {
+    return NextResponse.json(
+      { type: "error", message: "License key is required" },
+      {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+
   const headersList = headers();
   const ipAddress = headersList.get("x-forwarded-for");
   const identifier = ipAddress ?? licenseKey;
@@ -164,9 +176,6 @@ export async function POST(req: Request) {
   await checkRateLimit(identifier);
 
   try {
-    if (!licenseKey) {
-      throw new InvalidLicenseKey();
-    }
 
     const { user } = await fetchUserByLicenseKey(licenseKey);
 

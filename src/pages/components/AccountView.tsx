@@ -1,7 +1,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerLeftUp, HelpCircle, InfoIcon, RefreshCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CornerLeftUp, HelpCircle, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { AnimatePresence, type AnimationProps, motion } from "framer-motion";
@@ -26,6 +26,37 @@ import type { getServerSideProps } from "..";
 import { LICENSE_LENGTH } from "@/lib/utils";
 
 const apiKeyMask = "sk-••••••••••••••••••••••••••••••••";
+
+const revealAnimation: AnimationProps = {
+  initial: { opacity: 0, height: 0 },
+  animate: {
+    opacity: 1,
+    height: "auto",
+    transition: {
+      type: "spring",
+      damping: 15,
+      stiffness: 250,
+      restDelta: 0.001,
+    },
+  },
+  exit: {
+    opacity: 0,
+    height: 0,
+  },
+};
+
+const getLetterAnimation = (index: number): AnimationProps => ({
+  initial: { opacity: 1, y: -10 },
+  animate: {
+    y: index % 2 === 0 ? 10 : -10,
+    transition: {
+      type: "spring",
+      damping: 40,
+      stiffness: 150,
+      restDelta: 0.001,
+    },
+  },
+});
 
 const openaiApiKeySchema = z.string().startsWith("sk-", {
   message: "Invalid key, please double check it and paste again.",
@@ -165,6 +196,11 @@ export default function AccountView({
   const licenseKeyFieldIsLoading =
     generateLicenseKey.isLoading || licenseKeyQuery.isLoading;
 
+  const licenseKeyChars = useMemo(
+    () => animatedLicenseKey.split(""),
+    [animatedLicenseKey]
+  );
+
   const wasValidRef = useRef(isValid);
 
   useEffect(() => {
@@ -228,37 +264,6 @@ export default function AccountView({
     />
   );
 
-  const letterAnimation: AnimationProps = {
-    initial: { opacity: 1, y: -10 },
-    animate: {
-      y: Math.random() > 0.5 ? 10 : -10,
-      transition: {
-        type: "spring",
-        damping: 40,
-        stiffness: 150,
-        restDelta: 0.001,
-      },
-    },
-  };
-
-  const revealAnimation: AnimationProps = {
-    initial: { opacity: 0, height: 0 },
-    animate: {
-      opacity: 1,
-      height: "auto",
-      transition: {
-        type: "spring",
-        damping: 15,
-        stiffness: 250,
-        restDelta: 0.001,
-      },
-    },
-    exit: {
-      opacity: 0,
-      height: 0,
-    },
-  };
-
   const hasApiKey = userData?.openaiApiKey || apiKeyQuery.data;
 
   const hasLicenseKey = userData?.licenseKey || licenseKeyQuery.data;
@@ -296,8 +301,8 @@ export default function AccountView({
                       } `}
                     >
                       <AnimatePresence>
-                        {animatedLicenseKey.split("").map((char, index) => (
-                          <motion.span key={index} {...letterAnimation}>
+                        {licenseKeyChars.map((char, index) => (
+                          <motion.span key={index} {...getLetterAnimation(index)}>
                             {char}
                           </motion.span>
                         ))}

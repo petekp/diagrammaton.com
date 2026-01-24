@@ -6,6 +6,13 @@ await import("./src/env.mjs");
 
 /** @type {import("next").NextConfig} */
 const config = {
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-tooltip",
+    ],
+  },
   async headers() {
     return [
       {

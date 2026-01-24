@@ -15,7 +15,7 @@ import AccountView from "./components/AccountView";
 import Logo4 from "./components/Logo4";
 import ThemeToggle from "./components/ThemeToggle";
 import StarArrows from "./components/StarArrows";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { getServerSession } from "next-auth";
 import { prisma } from "~/server/db";
@@ -52,113 +52,136 @@ const signInStiffness = 60;
 
 const footerDelay = signInDelay + 2;
 
+const DIAMOND_PATH = "M50 0 L100 50 L50 100 L0 50 Z";
+const DIAGRAMMATON_LETTERS = "Diagrammaton".split("");
+
+const getScaleFactor = (index: number, total: number) => {
+  return Math.log(index / total + 1.3);
+};
+
+function Diamond({
+  index,
+  total,
+  hue,
+  hasSession,
+}: {
+  index: number;
+  total: number;
+  hue: number;
+  hasSession: boolean;
+}) {
+  const rotation = index * (93.12 / total);
+  const scaleFactor = getScaleFactor(index, total);
+  const color = `hsl(${hue}, var(--color-saturation), var(--color-lightness))`;
+
+  const initial = {
+    opacity: 0,
+    scale: hasSession ? scaleFactor * 1.3 : 1,
+    rotate: hasSession ? rotation : 0,
+  };
+
+  const animate = {
+    opacity: hasSession ? 0.55 : 1,
+    scale: hasSession ? scaleFactor * 1.3 : scaleFactor,
+    rotate: rotation,
+    transition: {
+      type: "spring",
+      damping: diamondDamping + (index / total / 2) * (diamondDamping + 10),
+      stiffness: diamondStiffness + (index / total) * (diamondDamping + 10),
+      delay: diamondDelay + (index / total) * 1.4,
+      restDelta: 0.001,
+    },
+  };
+
+  return (
+    <motion.path
+      d={DIAMOND_PATH}
+      stroke={color}
+      strokeLinecap={"round"}
+      strokeWidth={0.14}
+      fill="transparent"
+      initial={initial}
+      animate={animate}
+    />
+  );
+}
+
+function DiamondAnimation({
+  numDiamonds,
+  hasSession,
+}: {
+  numDiamonds: number;
+  hasSession: boolean;
+}) {
+  return (
+    <motion.svg
+      viewBox="0 0 100 100"
+      className="fixed z-0 aspect-square min-h-[800px] min-w-[500px] origin-center"
+    >
+      {Array.from({ length: numDiamonds }).map((_, index) => {
+        const hue = (360 * index) / numDiamonds;
+
+        return (
+          <Diamond
+            key={index}
+            index={index}
+            total={numDiamonds}
+            hue={hue}
+            hasSession={hasSession}
+          />
+        );
+      })}
+    </motion.svg>
+  );
+}
+
 export default function Home({
   providers,
   sessionData,
   userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
-  const arrowsAnimation: AnimationProps = {
-    initial: {
-      opacity: 0,
-      scale: sessionData ? 1 : 0.2,
-    },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        damping: arrowsDamping,
-        stiffness: arrowsStiffness,
-        restDelta: restDelta,
-        delay: arrowsDelay,
+  const hasSession = !!sessionData;
+
+  const arrowsAnimation: AnimationProps = useMemo(
+    () => ({
+      initial: {
+        opacity: 0,
+        scale: hasSession ? 1 : 0.2,
       },
-    },
-  };
-
-  const footerAnimation: AnimationProps = {
-    initial: {
-      opacity: sessionData ? 1 : 0,
-    },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        damping: diamondDamping,
-        stiffness: diamondStiffness,
-        restDelta: restDelta,
-        delay: footerDelay,
+      animate: {
+        opacity: 1,
+        scale: 1,
+        transition: {
+          type: "spring",
+          damping: arrowsDamping,
+          stiffness: arrowsStiffness,
+          restDelta: restDelta,
+          delay: arrowsDelay,
+        },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
-  const diamondPath = "M50 0 L100 50 L50 100 L0 50 Z";
-
-  const getScaleFactor = (index: number, total: number) => {
-    return Math.log(index / total + 1.3);
-  };
-
-  function Diamond({
-    index,
-    total,
-    hue,
-  }: {
-    index: number;
-    total: number;
-    hue: number;
-  }) {
-    const rotation = index * (93.12 / total);
-    const scaleFactor = getScaleFactor(index, total);
-    const color = `hsl(${hue}, var(--color-saturation), var(--color-lightness))`;
-
-    const initial = {
-      opacity: sessionData ? 0 : 0,
-      scale: sessionData ? scaleFactor * 1.3 : 1,
-      rotate: sessionData ? rotation : 0,
-    };
-
-    const animate = {
-      opacity: sessionData ? 0.55 : 1,
-      scale: sessionData ? scaleFactor * 1.3 : scaleFactor,
-      rotate: index * (93.12 / total),
-      transition: {
-        type: "spring",
-        damping: diamondDamping + (index / total / 2) * (diamondDamping + 10),
-        stiffness: diamondStiffness + (index / total) * (diamondDamping + 10),
-        delay: diamondDelay + (index / total) * 1.4,
-        restDelta: 0.001,
+  const footerAnimation: AnimationProps = useMemo(
+    () => ({
+      initial: {
+        opacity: hasSession ? 1 : 0,
       },
-    };
-
-    return (
-      <motion.path
-        d={diamondPath}
-        stroke={color}
-        strokeLinecap={"round"}
-        strokeWidth={0.14}
-        fill="transparent"
-        initial={initial}
-        animate={animate}
-      />
-    );
-  }
-
-  function DiamondAnimation({ numDiamonds }: { numDiamonds: number }) {
-    return (
-      <motion.svg
-        viewBox="0 0 100 100"
-        className="fixed z-0 aspect-square min-h-[800px] min-w-[500px] origin-center"
-      >
-        {Array.from({ length: numDiamonds }).map((_, index) => {
-          const hue = (360 * index) / numDiamonds;
-
-          return (
-            <Diamond key={index} index={index} total={numDiamonds} hue={hue} />
-          );
-        })}
-      </motion.svg>
-    );
-  }
+      animate: {
+        opacity: 1,
+        scale: 1,
+        transition: {
+          type: "spring",
+          damping: diamondDamping,
+          stiffness: diamondStiffness,
+          restDelta: restDelta,
+          delay: footerDelay,
+        },
+      },
+    }),
+    [hasSession]
+  );
 
   return (
     <>
@@ -180,7 +203,7 @@ export default function Home({
         </motion.div>
         <motion.div className="fixed aspect-square h-[200%] origin-center   rounded  bg-gradient-radial from-background/95 to-background/10 " />
 
-        <DiamondAnimation numDiamonds={DIAMONDS_NUM} />
+        <DiamondAnimation numDiamonds={DIAMONDS_NUM} hasSession={hasSession} />
 
         <SignIn
           providers={providers}
@@ -235,103 +258,124 @@ function SignIn({
   userData,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const [eyeHeight, setEyeHeight] = useState(500);
+  const hasSession = !!sessionData;
 
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
 
-  const containerAnimation: AnimationProps = {
-    initial: "centered",
-    animate: "raised",
-    variants: {
-      centered: { y: sessionData ? -20 : 105 },
-      raised: {
-        y: -20,
-        transition: {
-          type: "spring",
-          damping: containerDamping,
-          stiffness: containerStiffness,
-          delay: containerDelay,
+  const blinkIntervalRef = useRef(Math.random() * 2000 + 5000);
+
+  const containerAnimation: AnimationProps = useMemo(
+    () => ({
+      initial: "centered",
+      animate: "raised",
+      variants: {
+        centered: { y: hasSession ? -20 : 105 },
+        raised: {
+          y: -20,
+          transition: {
+            type: "spring",
+            damping: containerDamping,
+            stiffness: containerStiffness,
+            delay: containerDelay,
+          },
         },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
-  const staggerAnimation: AnimationProps = {
-    initial: "hidden",
-    animate: "visible",
-    variants: {
-      hidden: { opacity: sessionData ? 1 : 0 },
+  const staggerAnimation: AnimationProps = useMemo(
+    () => ({
+      initial: "hidden",
+      animate: "visible",
+      variants: {
+        hidden: { opacity: hasSession ? 1 : 0 },
+        visible: {
+          opacity: 1,
+          transition: {
+            type: "spring",
+            damping: 50,
+            stiffness: 50,
+            delayChildren: lettersDelay,
+            staggerChildren: 0.05,
+          },
+        },
+      },
+    }),
+    [hasSession]
+  );
+
+  const logoVariants = useMemo(
+    () => ({
+      hidden: { opacity: hasSession ? 1 : 0, scale: hasSession ? 1 : 1.6 },
       visible: {
         opacity: 1,
+        scale: 1,
         transition: {
           type: "spring",
-          damping: 50,
-          stiffness: 50,
-          delayChildren: lettersDelay,
-          staggerChildren: 0.05,
+          damping: logoDamping,
+          stiffness: logoStiffness,
+          delay: logoDelay,
+          restDelta: restDelta,
         },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
-  const logoVariants = {
-    hidden: { opacity: sessionData ? 1 : 0, scale: sessionData ? 1 : 1.6 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        damping: logoDamping,
-        stiffness: logoStiffness,
-        delay: logoDelay,
-        restDelta: restDelta,
+  const letterAnimation: AnimationProps = useMemo(
+    () => ({
+      initial: { opacity: hasSession ? 1 : 0 },
+      animate: {
+        opacity: 1,
+        transition: { type: "spring", damping: 30, stiffness: 170 },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
-  const letterAnimation: AnimationProps = {
-    initial: { opacity: sessionData ? 1 : 0 },
-    animate: {
-      opacity: 1,
-      transition: { type: "spring", damping: 30, stiffness: 170 },
-    },
-  };
-
-  const descriptionVariants = {
-    hidden: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: descriptionDamping,
-        stiffness: descriptionStiffness,
-        delay: descriptionDelay,
-        restDelta: restDelta,
+  const descriptionVariants = useMemo(
+    () => ({
+      hidden: { opacity: hasSession ? 1 : 0, y: hasSession ? 0 : -20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          type: "spring",
+          damping: descriptionDamping,
+          stiffness: descriptionStiffness,
+          delay: descriptionDelay,
+          restDelta: restDelta,
+        },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
-  const signInVariants = {
-    hidden: { opacity: sessionData ? 1 : 0, y: sessionData ? 0 : -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: signInDamping,
-        stiffness: signInStiffness,
-        delay: signInDelay,
-        restDelta: restDelta,
+  const signInVariants = useMemo(
+    () => ({
+      hidden: { opacity: hasSession ? 1 : 0, y: hasSession ? 0 : -20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          type: "spring",
+          damping: signInDamping,
+          stiffness: signInStiffness,
+          delay: signInDelay,
+          restDelta: restDelta,
+        },
       },
-    },
-  };
+    }),
+    [hasSession]
+  );
 
   useEffect(() => {
     const toggleEyeHeight = () => {
       setEyeHeight(1);
       void new Promise((resolve) => setTimeout(resolve, 200)).then(() => {
-        setEyeHeight((value) => (isDarkMode ? 50 : 50));
+        setEyeHeight(50);
       });
     };
 
@@ -339,7 +383,7 @@ function SignIn({
 
     const intervalId = setInterval(() => {
       void toggleEyeHeight();
-    }, Math.random() * 2000 + 5000);
+    }, blinkIntervalRef.current);
 
     return () => {
       clearInterval(intervalId);
@@ -364,7 +408,7 @@ function SignIn({
             <Logo4
               eyeHeight={eyeHeight}
               isDarkMode={isDarkMode}
-              size={sessionData ? 60 : 80}
+              size={hasSession ? 60 : 80}
             />
           </motion.div>
           <div className="space-y-1 text-center">
@@ -373,10 +417,10 @@ function SignIn({
               className={`text text-2xl uppercase tracking-widest text-foreground  ${
                 lexend.className
               } ${
-                sessionData ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+                hasSession ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
               } `}
             >
-              {"Diagrammaton".split("").map((char, index) => (
+              {DIAGRAMMATON_LETTERS.map((char, index) => (
                 <motion.span
                   key={index}
                   {...letterAnimation}
@@ -391,14 +435,14 @@ function SignIn({
               initial="hidden"
               animate="visible"
               className={`text tracking-wide text-center text-muted ${
-                sessionData ? "text-sm sm:text-base" : ""
+                hasSession ? "text-sm sm:text-base" : ""
               }`}
             >
               AI powered diagrams for FigJam
             </motion.p>
           </div>
         </div>
-        {sessionData && (
+        {hasSession && (
           <motion.div
             variants={signInVariants}
             initial="hidden"
@@ -407,7 +451,7 @@ function SignIn({
             <AccountView userData={userData} />
           </motion.div>
         )}
-        {!sessionData && (
+        {!hasSession && (
           <motion.div
             variants={signInVariants}
             initial="hidden"
@@ -451,25 +495,20 @@ function SignIn({
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
-  const sessionData = await getServerSession(
-    context.req,
-    context.res,
-    authOptions
-  );
-  const providers = await getProviders();
+  const [sessionData, providers] = await Promise.all([
+    getServerSession(context.req, context.res, authOptions),
+    getProviders(),
+  ]);
 
-  // Default userData
   let userData = {
     licenseKey: "",
     openaiApiKey: "",
   };
 
   if (sessionData?.user?.id) {
-    const userId = sessionData.user.id;
-
     const user = await prisma.user.findUnique({
       where: {
-        id: userId,
+        id: sessionData.user.id,
       },
       include: {
         licenseKeys: true,
@@ -486,12 +525,6 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
     props: {
       providers: providers ?? [],
       sessionData: sessionData ?? null,
-      // sessionData: {
-      //   user: {
-      //     email: "something@soemthing.com",
-      //     id: "102",
-      //   },
-      // },
       userData,
     },
   };
