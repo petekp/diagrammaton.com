@@ -65,7 +65,7 @@ export class InvalidLicenseKey extends DiagrammatonError {
 export class InvalidApiKey extends DiagrammatonError {
   constructor(data?: LogArgument) {
     super({
-      message: "Invalid OpenAI API key",
+      message: "Invalid API key",
       code: "BAD_REQUEST",
       logArgs: data,
     });
@@ -92,7 +92,7 @@ export class UserNotFound extends DiagrammatonError {
 export class ApiKeyNotFoundForUser extends DiagrammatonError {
   constructor(data?: LogArgument) {
     super({
-      message: "No OpenAI API key registered",
+      message: "No API key registered",
       code: "BAD_REQUEST",
       logArgs: data,
     });

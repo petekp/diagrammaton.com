@@ -5,7 +5,7 @@ const rollbar = new Rollbar({
   accessToken: env.ROLLBAR_ACCESS_TOKEN,
   captureUncaught: true,
   captureUnhandledRejections: true,
-  scrubFields: ["openaiApiKey"],
+  scrubFields: ["openaiApiKey", "anthropicApiKey"],
 });
 
 export function logError(message: string, data?: LogArgument) {

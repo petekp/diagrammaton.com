@@ -5,8 +5,18 @@ import handleError, {
 } from "~/server/api/routers/errors";
 import { prisma } from "~/server/db";
 import { logError } from "~/utils/log";
+import type { LicenseKey } from "@prisma/client";
 
-export async function fetchUserByLicenseKey(licenseKey: string) {
+export type LicensedUser = {
+  id: string;
+  email: string | null;
+  openaiApiKey: string | null;
+  anthropicApiKey: string | null;
+};
+
+export async function fetchUserByLicenseKey(
+  licenseKey: string
+): Promise<{ user: LicensedUser; licenseKeys: LicenseKey[] }> {
   const license = await prisma.licenseKey.findFirst({
     where: {
       key: licenseKey,
@@ -21,14 +31,14 @@ export async function fetchUserByLicenseKey(licenseKey: string) {
 
   const user = await prisma.user.findUnique({
     where: { id: license.userId },
-    select: { id: true, email: true, openaiApiKey: true },
+    select: { id: true, email: true, openaiApiKey: true, anthropicApiKey: true },
   });
 
   if (!user) {
     throw new UserNotFound({ input: { licenseKey } });
   }
 
-  return { user, licenseKeys: [license] };
+  return { user: user as LicensedUser, licenseKeys: [license] };
 }
 
 export async function verifyLicenseKey(key: string) {

@@ -57,6 +57,8 @@ model User {
   teams                Team[]                @relation("TeamMembers")
   openaiApiKey         String?               @unique
   openaiApiKeyLastFour String?
+  anthropicApiKey         String?               @unique
+  anthropicApiKeyLastFour String?
 }
 
 model VerificationToken {
