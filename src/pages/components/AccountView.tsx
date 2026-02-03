@@ -19,6 +19,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { InferGetServerSidePropsType } from "next";
@@ -74,7 +75,7 @@ export default function AccountView({
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
   const [animatedLicenseKey, setAnimatedLicenseKey] = useState(
-    userData?.licenseKey
+    userData?.licenseKey || "0".repeat(LICENSE_LENGTH)
   );
   const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation({
@@ -377,16 +378,18 @@ export default function AccountView({
   );
 
   return (
-    <Form {...form}>
-      <form
-        className="min-w-[310px] max-w-[350px] space-y-6"
-        spellCheck="false"
-      >
-        <motion.div>{apiKeyField}</motion.div>
-        <AnimatePresence>
-          {hasApiKey && <motion.div>{licenseKeyField}</motion.div>}
-        </AnimatePresence>
-      </form>
-    </Form>
+    <TooltipProvider>
+      <Form {...form}>
+        <form
+          className="min-w-[310px] max-w-[350px] space-y-6"
+          spellCheck="false"
+        >
+          <motion.div>{apiKeyField}</motion.div>
+          <AnimatePresence>
+            {hasApiKey && <motion.div>{licenseKeyField}</motion.div>}
+          </AnimatePresence>
+        </form>
+      </Form>
+    </TooltipProvider>
   );
 }

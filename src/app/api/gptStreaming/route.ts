@@ -3,10 +3,16 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat";
 import type {
   ResponseInput,
   ResponseInputText,
+  ResponseFormatTextConfig,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
+import type {
+  ResponseFormatJSONSchema,
+  ResponseFormatJSONObject,
+  ResponseFormatText,
+} from "openai/resources/shared";
 import { zodResponseFormat, zodTextFormat } from "openai/helpers/zod";
-import { type z } from "zod";
+import { type z, type ZodTypeAny } from "zod";
 import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
 import {
@@ -33,15 +39,20 @@ export const runtime = "nodejs";
 const resolveTargetModel = (_clientModel: "gpt5" | "gpt3" | "gpt4") =>
   "gpt-5" as const;
 
-const diagramResponsesTextFormat = zodTextFormat(
-  diagramResponseSchema,
-  "diagram_response"
-);
+const zodTextFormatAny =
+  zodTextFormat as unknown as (schema: ZodTypeAny, name: string) => unknown;
+const zodResponseFormatAny =
+  zodResponseFormat as unknown as (schema: ZodTypeAny, name: string) => unknown;
 
-const diagramChatResponseFormat = zodResponseFormat(
-  diagramResponseSchema,
+const diagramResponsesTextFormat = zodTextFormatAny(
+  diagramResponseSchema as ZodTypeAny,
   "diagram_response"
-);
+) as ResponseFormatTextConfig;
+
+const diagramChatResponseFormat = zodResponseFormatAny(
+  diagramResponseSchema as ZodTypeAny,
+  "diagram_response"
+) as ResponseFormatText | ResponseFormatJSONSchema | ResponseFormatJSONObject;
 
 const normalizeMessageContent = (
   content: ChatCompletionMessageParam["content"]
