@@ -7,16 +7,20 @@ import { prisma } from "~/server/db";
 import { logError } from "~/utils/log";
 
 export async function fetchUserByLicenseKey(licenseKey: string) {
-  const licenseKeys = await prisma.licenseKey.findMany({
-    where: { key: licenseKey },
+  const license = await prisma.licenseKey.findFirst({
+    where: {
+      key: licenseKey,
+      revoked: false,
+      expiresAt: { gt: new Date() },
+    },
   });
 
-  if (!licenseKeys.length) {
+  if (!license) {
     throw new InvalidLicenseKey({ input: { licenseKey } });
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: licenseKeys[0]?.userId },
+    where: { id: license.userId },
     select: { id: true, email: true, openaiApiKey: true },
   });
 
@@ -24,14 +28,16 @@ export async function fetchUserByLicenseKey(licenseKey: string) {
     throw new UserNotFound({ input: { licenseKey } });
   }
 
-  return { user, licenseKeys };
+  return { user, licenseKeys: [license] };
 }
 
 export async function verifyLicenseKey(key: string) {
   try {
-    const licenseKey = await prisma.licenseKey.findUnique({
+    const licenseKey = await prisma.licenseKey.findFirst({
       where: {
         key,
+        revoked: false,
+        expiresAt: { gt: new Date() },
       },
     });
 
