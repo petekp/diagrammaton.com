@@ -1,13 +1,21 @@
-import { StreamingTextResponse } from "ai";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
+import type { ThinkingConfigParam } from "@anthropic-ai/sdk/resources/messages";
+import type { MessageStream } from "@anthropic-ai/sdk/lib/MessageStream";
 import type { ChatCompletionMessageParam } from "openai/resources/chat";
 import type {
   ResponseInput,
   ResponseInputText,
+  ResponseFormatTextConfig,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
+import type {
+  ResponseFormatJSONSchema,
+  ResponseFormatJSONObject,
+  ResponseFormatText,
+} from "openai/resources/shared";
 import { zodResponseFormat, zodTextFormat } from "openai/helpers/zod";
-import { type z } from "zod";
+import { type z, type ZodTypeAny } from "zod";
 import { headers } from "next/headers";
 import { fetchUserByLicenseKey } from "~/app/dataHelpers";
 import {
@@ -23,6 +31,7 @@ import { logError, logInfo } from "~/utils/log";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "~/app/rateLimiter";
 import { type Action, actionSchemas, type ActionDataMap } from "~/app/types";
+import { parseModelSelection } from "~/app/models";
 
 
 export function OPTIONS(_req: Request) {
@@ -31,18 +40,20 @@ export function OPTIONS(_req: Request) {
 
 export const runtime = "nodejs";
 
-const resolveTargetModel = (_clientModel: "gpt5" | "gpt3" | "gpt4") =>
-  "gpt-5" as const;
+const zodTextFormatAny =
+  zodTextFormat as unknown as (schema: ZodTypeAny, name: string) => unknown;
+const zodResponseFormatAny =
+  zodResponseFormat as unknown as (schema: ZodTypeAny, name: string) => unknown;
 
-const diagramResponsesTextFormat = zodTextFormat(
-  diagramResponseSchema,
+const diagramResponsesTextFormat = zodTextFormatAny(
+  diagramResponseSchema as ZodTypeAny,
   "diagram_response"
-);
+) as ResponseFormatTextConfig;
 
-const diagramChatResponseFormat = zodResponseFormat(
-  diagramResponseSchema,
+const diagramChatResponseFormat = zodResponseFormatAny(
+  diagramResponseSchema as ZodTypeAny,
   "diagram_response"
-);
+) as ResponseFormatText | ResponseFormatJSONSchema | ResponseFormatJSONObject;
 
 const normalizeMessageContent = (
   content: ChatCompletionMessageParam["content"]
@@ -99,6 +110,26 @@ const messagesToResponsesInput = (
   return responseInput;
 };
 
+const messagesToAnthropicInput = (
+  messages: ChatCompletionMessageParam[]
+): { system?: string; messages: Array<{ role: "user" | "assistant"; content: string }> } => {
+  let system = "";
+  const converted: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  for (const message of messages) {
+    const text = normalizeMessageContent(message.content);
+    if (message.role === "system") {
+      system = system ? `${system}\n\n${text}` : text;
+      continue;
+    }
+    if (message.role === "user" || message.role === "assistant") {
+      converted.push({ role: message.role, content: text });
+    }
+  }
+
+  return { system: system || undefined, messages: converted };
+};
+
 const extractOutputText = (response: unknown): string => {
   if (!response || typeof response !== "object") {
     return "";
@@ -150,6 +181,7 @@ export async function POST(req: Request) {
   const inputData = schema.parse(data);
 
   const { licenseKey, model: clientModel } = inputData;
+  const modelSelection = parseModelSelection(clientModel);
 
   console.info("Generate endpoint called: ", {
     action,
@@ -179,6 +211,101 @@ export async function POST(req: Request) {
 
     const { user } = await fetchUserByLicenseKey(licenseKey);
 
+    const messages = generateMessages({ action, data: inputData });
+    const { provider, model: selectedModel, variant } = modelSelection;
+
+    if (provider === "anthropic") {
+      if (!user.anthropicApiKey) {
+        throw new DiagrammatonError({
+          message: "Missing Anthropic API key",
+          code: "BAD_REQUEST",
+        });
+      }
+
+      const anthropic = new Anthropic({
+        apiKey: user.anthropicApiKey,
+      });
+
+      const anthropicInput = messagesToAnthropicInput(messages);
+      const maxTokens = 4096;
+      const thinkingBudget = 1024;
+      const thinking: ThinkingConfigParam =
+        variant === "thinking"
+          ? {
+              type: "enabled",
+              budget_tokens: Math.min(thinkingBudget, maxTokens - 1),
+            }
+          : { type: "disabled" };
+
+      logInfo("gptStreaming: Anthropic streaming begin", {
+        model: selectedModel,
+        variant,
+      });
+
+      let messageStream: MessageStream | null = null;
+
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          let firstChunkSeen = false;
+          messageStream = anthropic.messages.stream({
+            model: selectedModel,
+            max_tokens: maxTokens,
+            messages: anthropicInput.messages,
+            system: anthropicInput.system,
+            thinking,
+          });
+
+          messageStream.on("text", (delta) => {
+            if (!delta) return;
+            firstChunkSeen = true;
+            controller.enqueue(encoder.encode(delta));
+          });
+
+          messageStream.on("error", (error) => {
+            logError("gptStreaming: Anthropic stream error", {
+              message: (error as Error)?.message,
+            });
+            controller.error(error as Error);
+          });
+
+          messageStream.on("end", () => {
+            void (async () => {
+              const currentStream = messageStream;
+              if (!currentStream) {
+                controller.close();
+                return;
+              }
+              if (!firstChunkSeen) {
+                try {
+                  const fallbackText = await currentStream.finalText();
+                  if (fallbackText) {
+                    controller.enqueue(encoder.encode(fallbackText));
+                  }
+                } catch (error) {
+                  logError("gptStreaming: Anthropic finalText failed", {
+                    message: (error as Error)?.message,
+                  });
+                }
+              }
+              controller.close();
+            })();
+          });
+        },
+        cancel() {
+          messageStream?.abort();
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
+
     if (!user.openaiApiKey) {
       throw new InvalidApiKey();
     }
@@ -187,10 +314,8 @@ export async function POST(req: Request) {
       apiKey: user.openaiApiKey || "",
     });
 
-    // Prefer the Responses API (GPT‑5) if available in the SDK; otherwise fall back to chat streaming.
-    const targetModel = resolveTargetModel(clientModel);
-
-    const messages = generateMessages({ action, data: inputData });
+    // Prefer the Responses API if available in the SDK; otherwise fall back to chat streaming.
+    const targetModel = selectedModel;
 
     const responsesInput = messagesToResponsesInput(messages);
     const responsesAvailable =
@@ -256,27 +381,44 @@ export async function POST(req: Request) {
         },
       });
 
-      return new StreamingTextResponse(stream);
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     };
 
     if (responsesAvailable) {
       try {
         logInfo("gptStreaming: Responses streaming begin", {
           model: targetModel,
+          variant,
         });
         const abortController = new AbortController();
         const streamingFirstChunkTimeoutMs = 60000;
-        const respStream = openai.responses.stream(
-          {
-            model: targetModel,
-            input: responsesInput,
-            reasoning: { effort: "low" },
-            text: {
-              format: diagramResponsesTextFormat,
-              verbosity: "low",
-            },
-            store: false,
+        const supportsReasoning = targetModel.startsWith("gpt-5");
+        const responsePayload: Parameters<
+          typeof openai.responses.stream
+        >[0] = {
+          model: targetModel,
+          input: responsesInput,
+          text: {
+            format: diagramResponsesTextFormat,
+            verbosity: "low",
           },
+          store: false,
+        };
+
+        if (supportsReasoning) {
+          (responsePayload as { reasoning?: { effort: string } }).reasoning = {
+            effort: variant === "thinking" ? "high" : "low",
+          };
+        }
+
+        const respStream = openai.responses.stream(
+          responsePayload,
           { signal: abortController.signal }
         );
 
@@ -414,7 +556,13 @@ export async function POST(req: Request) {
           model: targetModel,
         });
 
-        return new StreamingTextResponse(stream);
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
       } catch (error) {
         const message = (error as Error)?.message || "";
         logError("gptStreaming: responses streaming failed", { message });

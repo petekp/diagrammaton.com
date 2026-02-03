@@ -1,15 +1,15 @@
 import { z } from "zod";
+import { normalizeLegacyModelId } from "~/app/models";
 
 export const Action = z.union([z.literal("generate"), z.literal("modify")]);
 
-// Accept legacy values but normalize to "gpt5"
+// Accept legacy values but normalize to modern model identifiers
 export const modelSchema = z.preprocess((val) => {
-  const v = String(val);
-  if (v === "gpt3" || v === "gpt-3.5" || v === "gpt4" || v === "gpt-4") {
-    return "gpt5";
+  if (typeof val !== "string") {
+    return val;
   }
-  return v;
-}, z.literal("gpt5"));
+  return normalizeLegacyModelId(val.trim());
+}, z.string().min(1));
 
 export const generateInputSchema = z.object({
   diagramDescription: z.string(),

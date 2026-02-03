@@ -503,21 +503,29 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   let userData = {
     licenseKey: "",
     openaiApiKey: "",
+    anthropicApiKey: "",
   };
 
   if (sessionData?.user?.id) {
-    const user = await prisma.user.findUnique({
+    const user = (await prisma.user.findUnique({
       where: {
         id: sessionData.user.id,
       },
       include: {
         licenseKeys: true,
       },
-    });
+    })) as
+      | {
+          licenseKeys: Array<{ key: string }>;
+          openaiApiKeyLastFour: string | null;
+          anthropicApiKeyLastFour: string | null;
+        }
+      | null;
 
     userData = {
       licenseKey: user?.licenseKeys[0]?.key || "",
       openaiApiKey: user?.openaiApiKeyLastFour || "",
+      anthropicApiKey: user?.anthropicApiKeyLastFour || "",
     };
   }
 

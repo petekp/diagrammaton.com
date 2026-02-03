@@ -1,5 +1,4 @@
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CornerLeftUp, HelpCircle, RefreshCcw } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -19,6 +18,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { InferGetServerSidePropsType } from "next";
@@ -26,6 +26,7 @@ import type { getServerSideProps } from "..";
 import { LICENSE_LENGTH } from "@/lib/utils";
 
 const apiKeyMask = "sk-••••••••••••••••••••••••••••••••";
+const anthropicApiKeyMask = "sk-ant-••••••••••••••••••••••••••";
 
 const revealAnimation: AnimationProps = {
   initial: { opacity: 0, height: 0 },
@@ -61,9 +62,8 @@ const getLetterAnimation = (index: number): AnimationProps => ({
 const openaiApiKeySchema = z.string().startsWith("sk-", {
   message: "Invalid key, please double check it and paste again.",
 });
-
-const formSchema = z.object({
-  openaiApiKey: openaiApiKeySchema,
+const anthropicApiKeySchema = z.string().startsWith("sk-ant-", {
+  message: "Invalid key, please double check it and paste again.",
 });
 
 export default function AccountView({
@@ -74,7 +74,7 @@ export default function AccountView({
   const utils = api.useContext();
   const [copySuccess, setCopySuccess] = useState("");
   const [animatedLicenseKey, setAnimatedLicenseKey] = useState(
-    userData?.licenseKey
+    userData?.licenseKey || "0".repeat(LICENSE_LENGTH)
   );
   const { data: session } = useSession();
   const generateLicenseKey = api.license.generateLicenseKey.useMutation({
@@ -83,35 +83,39 @@ export default function AccountView({
       setAnimatedLicenseKey(data);
     },
   });
-  const saveApiKey = api.apiKey.setUserApiKey.useMutation({
+  const saveOpenAiApiKey = api.apiKey.setUserApiKey.useMutation({
     onSuccess: () => {
       void utils.apiKey.invalidate();
     },
   });
-  const validateApiKey = api.apiKey.validate.useMutation();
+  const saveAnthropicApiKey = api.apiKey.setUserAnthropicApiKey.useMutation({
+    onSuccess: () => {
+      void utils.apiKey.invalidate();
+    },
+  });
+  const validateOpenAiApiKey = api.apiKey.validate.useMutation();
+  const validateAnthropicApiKey = api.apiKey.validateAnthropic.useMutation();
   const licenseKeyQuery = api.license.getUserLicenseKey.useQuery();
-  const apiKeyQuery = api.apiKey.getUserKeyLastFour.useQuery();
+  const openaiApiKeyQuery = api.apiKey.getUserKeyLastFour.useQuery();
+  const anthropicApiKeyQuery = api.apiKey.getUserAnthropicKeyLastFour.useQuery();
 
   const form = useForm({
-    resolver: zodResolver(formSchema),
     mode: "onChange",
     defaultValues: {
       openaiApiKey: userData?.openaiApiKey
         ? `${apiKeyMask}${userData?.openaiApiKey}`
         : "",
+      anthropicApiKey: userData?.anthropicApiKey
+        ? `${anthropicApiKeyMask}${userData?.anthropicApiKey}`
+        : "",
       licenseKey: userData?.licenseKey || "0".repeat(LICENSE_LENGTH),
     },
   });
 
-  const {
-    setValue,
-    handleSubmit,
-    formState: { isValidating, isSubmitting, isValid },
-    watch,
-    setError,
-  } = form;
+  const { setValue, watch, setError, clearErrors } = form;
 
-  const apiKey = watch("openaiApiKey");
+  const openaiApiKey = watch("openaiApiKey");
+  const anthropicApiKey = watch("anthropicApiKey");
 
   useEffect(() => {
     if (generateLicenseKey.isLoading) {
@@ -129,8 +133,22 @@ export default function AccountView({
     }
   }, [generateLicenseKey.isLoading]);
 
-  const onSubmitApiKey = useCallback(async () => {
-    const isValid = await validateApiKey.mutateAsync(apiKey);
+  const onSubmitOpenAiApiKey = useCallback(async () => {
+    const candidate = openaiApiKey?.trim();
+    if (!candidate || candidate.includes("•")) {
+      return;
+    }
+
+    const isFormatValid = openaiApiKeySchema.safeParse(candidate).success;
+    if (!isFormatValid) {
+      setError("openaiApiKey", {
+        type: "manual",
+        message: "Invalid key format. Paste a valid OpenAI key.",
+      });
+      return;
+    }
+
+    const isValid = await validateOpenAiApiKey.mutateAsync(candidate);
 
     if (!isValid) {
       setError("openaiApiKey", {
@@ -140,9 +158,9 @@ export default function AccountView({
       return;
     }
 
-    const lastfour = await saveApiKey.mutateAsync({
+    const lastfour = await saveOpenAiApiKey.mutateAsync({
       userId: session?.user?.id || "",
-      apiKey,
+      apiKey: candidate,
     });
 
     if (!lastfour) {
@@ -152,10 +170,56 @@ export default function AccountView({
     setValue("openaiApiKey", `${apiKeyMask}${lastfour}`);
     await generateLicenseKey.mutateAsync();
   }, [
-    apiKey,
-    validateApiKey,
+    openaiApiKey,
+    validateOpenAiApiKey,
     setError,
-    saveApiKey,
+    saveOpenAiApiKey,
+    session,
+    setValue,
+    generateLicenseKey,
+  ]);
+
+  const onSubmitAnthropicApiKey = useCallback(async () => {
+    const candidate = anthropicApiKey?.trim();
+    if (!candidate || candidate.includes("•")) {
+      return;
+    }
+
+    const isFormatValid = anthropicApiKeySchema.safeParse(candidate).success;
+    if (!isFormatValid) {
+      setError("anthropicApiKey", {
+        type: "manual",
+        message: "Invalid key format. Paste a valid Anthropic key.",
+      });
+      return;
+    }
+
+    const isValid = await validateAnthropicApiKey.mutateAsync(candidate);
+
+    if (!isValid) {
+      setError("anthropicApiKey", {
+        type: "manual",
+        message: "Hmm this key isn't working, can you verify and try again?",
+      });
+      return;
+    }
+
+    const lastfour = await saveAnthropicApiKey.mutateAsync({
+      userId: session?.user?.id || "",
+      apiKey: candidate,
+    });
+
+    if (!lastfour) {
+      return;
+    }
+
+    setValue("anthropicApiKey", `${anthropicApiKeyMask}${lastfour}`);
+    await generateLicenseKey.mutateAsync();
+  }, [
+    anthropicApiKey,
+    validateAnthropicApiKey,
+    setError,
+    saveAnthropicApiKey,
     session,
     setValue,
     generateLicenseKey,
@@ -192,7 +256,14 @@ export default function AccountView({
     }
   }, [copySuccess]);
 
-  const apiKeyFieldIsLoading = saveApiKey.isLoading || apiKeyQuery.isLoading;
+  const openaiKeyFieldIsLoading =
+    saveOpenAiApiKey.isLoading ||
+    validateOpenAiApiKey.isLoading ||
+    openaiApiKeyQuery.isLoading;
+  const anthropicKeyFieldIsLoading =
+    saveAnthropicApiKey.isLoading ||
+    validateAnthropicApiKey.isLoading ||
+    anthropicApiKeyQuery.isLoading;
   const licenseKeyFieldIsLoading =
     generateLicenseKey.isLoading || licenseKeyQuery.isLoading;
 
@@ -201,23 +272,52 @@ export default function AccountView({
     [animatedLicenseKey]
   );
 
-  const wasValidRef = useRef(isValid);
+  const lastSubmittedOpenAiKey = useRef<string | null>(null);
+  const lastSubmittedAnthropicKey = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isValidating && !isSubmitting && isValid && !wasValidRef.current) {
-      void onSubmitApiKey();
+    const candidate = openaiApiKey?.trim();
+    if (!candidate || candidate.includes("•")) {
+      return;
     }
-    wasValidRef.current = isValid;
-  }, [apiKey, isValidating, isSubmitting, onSubmitApiKey, isValid]);
+    if (!openaiApiKeySchema.safeParse(candidate).success) {
+      return;
+    }
+    if (candidate === lastSubmittedOpenAiKey.current) {
+      return;
+    }
+    if (openaiKeyFieldIsLoading) {
+      return;
+    }
+    lastSubmittedOpenAiKey.current = candidate;
+    void onSubmitOpenAiApiKey();
+  }, [openaiApiKey, onSubmitOpenAiApiKey, openaiKeyFieldIsLoading]);
 
-  const apiKeyField = (
+  useEffect(() => {
+    const candidate = anthropicApiKey?.trim();
+    if (!candidate || candidate.includes("•")) {
+      return;
+    }
+    if (!anthropicApiKeySchema.safeParse(candidate).success) {
+      return;
+    }
+    if (candidate === lastSubmittedAnthropicKey.current) {
+      return;
+    }
+    if (anthropicKeyFieldIsLoading) {
+      return;
+    }
+    lastSubmittedAnthropicKey.current = candidate;
+    void onSubmitAnthropicApiKey();
+  }, [anthropicApiKey, onSubmitAnthropicApiKey, anthropicKeyFieldIsLoading]);
+
+  const openaiApiKeyField = (
     <Controller
       name="openaiApiKey"
-      render={({ field, fieldState: { error } }) => (
-        <FormItem
-          className="flex flex-col items-start"
-          onSubmit={void handleSubmit(onSubmitApiKey)}
-        >
+      render={({ field, fieldState: { error } }) => {
+        const { onChange, ...restField } = field;
+        return (
+        <FormItem className="flex flex-col items-start">
           <div className="flex flex-row items-center gap-2">
             <FormLabel className="flex select-none flex-row gap-2">
               Your OpenAI API key{" "}
@@ -239,10 +339,14 @@ export default function AccountView({
               <div className="relative flex-1">
                 <Input
                   tabIndex={0}
-                  disabled={apiKeyFieldIsLoading}
+                  disabled={openaiKeyFieldIsLoading}
                   onFocus={(e) => e.target.select()}
+                  onChange={(event) => {
+                    clearErrors("openaiApiKey");
+                    onChange(event);
+                  }}
                   placeholder={"Paste key"}
-                  {...field}
+                  {...restField}
                   className="w-full flex-1"
                 />
               </div>
@@ -260,11 +364,73 @@ export default function AccountView({
           </AnimatePresence>
           <FormMessage />
         </FormItem>
-      )}
+        );
+      }}
     />
   );
 
-  const hasApiKey = userData?.openaiApiKey || apiKeyQuery.data;
+  const anthropicApiKeyField = (
+    <Controller
+      name="anthropicApiKey"
+      render={({ field, fieldState: { error } }) => {
+        const { onChange, ...restField } = field;
+        return (
+        <FormItem className="flex flex-col items-start">
+          <div className="flex flex-row items-center gap-2">
+            <FormLabel className="flex select-none flex-row gap-2">
+              Your Anthropic API key{" "}
+            </FormLabel>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle
+                  size={16}
+                  className={`border-3 stroke-gray-500 hover:stroke-gray-400 dark:stroke-gray-400 dark:hover:stroke-gray-300`}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                Your key is used when generating diagrams
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <FormControl>
+            <div className=" flex w-full flex-row gap-1">
+              <div className="relative flex-1">
+                <Input
+                  tabIndex={0}
+                  disabled={anthropicKeyFieldIsLoading}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(event) => {
+                    clearErrors("anthropicApiKey");
+                    onChange(event);
+                  }}
+                  placeholder={"Paste key"}
+                  {...restField}
+                  className="w-full flex-1"
+                />
+              </div>
+            </div>
+          </FormControl>
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                {...revealAnimation}
+                className="error-message select-none text-xs text-orange-700 dark:text-orange-400"
+              >
+                {error.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
+          <FormMessage />
+        </FormItem>
+        );
+      }}
+    />
+  );
+
+  const hasOpenaiApiKey = userData?.openaiApiKey || openaiApiKeyQuery.data;
+  const hasAnthropicApiKey =
+    userData?.anthropicApiKey || anthropicApiKeyQuery.data;
+  const hasApiKey = hasOpenaiApiKey || hasAnthropicApiKey;
 
   const hasLicenseKey = userData?.licenseKey || licenseKeyQuery.data;
 
@@ -377,16 +543,19 @@ export default function AccountView({
   );
 
   return (
-    <Form {...form}>
-      <form
-        className="min-w-[310px] max-w-[350px] space-y-6"
-        spellCheck="false"
-      >
-        <motion.div>{apiKeyField}</motion.div>
-        <AnimatePresence>
-          {hasApiKey && <motion.div>{licenseKeyField}</motion.div>}
-        </AnimatePresence>
-      </form>
-    </Form>
+    <TooltipProvider>
+      <Form {...form}>
+        <form
+          className="min-w-[310px] max-w-[350px] space-y-6"
+          spellCheck="false"
+        >
+          <motion.div>{openaiApiKeyField}</motion.div>
+          <motion.div>{anthropicApiKeyField}</motion.div>
+          <AnimatePresence>
+            {hasApiKey && <motion.div>{licenseKeyField}</motion.div>}
+          </AnimatePresence>
+        </form>
+      </Form>
+    </TooltipProvider>
   );
 }

@@ -1,6 +1,6 @@
-import { ChatCompletionMessageParam } from "openai/resources/chat";
 import { z } from "zod";
-import {
+import type { ChatCompletionMessageParam } from "openai/resources/chat";
+import type {
   Action,
   ActionDataMap,
   generateInputSchema,

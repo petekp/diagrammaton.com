@@ -5,33 +5,49 @@ import handleError, {
 } from "~/server/api/routers/errors";
 import { prisma } from "~/server/db";
 import { logError } from "~/utils/log";
+import type { LicenseKey } from "@prisma/client";
 
-export async function fetchUserByLicenseKey(licenseKey: string) {
-  const licenseKeys = await prisma.licenseKey.findMany({
-    where: { key: licenseKey },
+export type LicensedUser = {
+  id: string;
+  email: string | null;
+  openaiApiKey: string | null;
+  anthropicApiKey: string | null;
+};
+
+export async function fetchUserByLicenseKey(
+  licenseKey: string
+): Promise<{ user: LicensedUser; licenseKeys: LicenseKey[] }> {
+  const license = await prisma.licenseKey.findFirst({
+    where: {
+      key: licenseKey,
+      revoked: false,
+      expiresAt: { gt: new Date() },
+    },
   });
 
-  if (!licenseKeys.length) {
+  if (!license) {
     throw new InvalidLicenseKey({ input: { licenseKey } });
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: licenseKeys[0]?.userId },
-    select: { id: true, email: true, openaiApiKey: true },
+    where: { id: license.userId },
+    select: { id: true, email: true, openaiApiKey: true, anthropicApiKey: true },
   });
 
   if (!user) {
     throw new UserNotFound({ input: { licenseKey } });
   }
 
-  return { user, licenseKeys };
+  return { user: user as LicensedUser, licenseKeys: [license] };
 }
 
 export async function verifyLicenseKey(key: string) {
   try {
-    const licenseKey = await prisma.licenseKey.findUnique({
+    const licenseKey = await prisma.licenseKey.findFirst({
       where: {
         key,
+        revoked: false,
+        expiresAt: { gt: new Date() },
       },
     });
 
